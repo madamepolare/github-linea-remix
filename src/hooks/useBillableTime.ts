@@ -46,28 +46,63 @@ export function useBillableTime(projectId: string) {
   const queryKey = ["billable-time", projectId];
 
   // Fetch unbilled time entries for a project
+  // This includes entries with direct project_id OR entries linked via task.project_id
   const { data: entries = [], isLoading, error } = useQuery({
     queryKey,
     queryFn: async () => {
       if (!activeWorkspace || !projectId) return [];
 
-      // Fetch team_time_entries
-      const { data: teamEntries, error: teamError } = await supabase
+      // First, get task IDs that belong to this project
+      const { data: projectTasks } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("project_id", projectId);
+
+      const projectTaskIds = (projectTasks || []).map(t => t.id);
+
+      // Fetch team_time_entries with direct project_id
+      const { data: directEntries, error: directError } = await supabase
         .from("team_time_entries")
         .select(`
           *,
           project:projects(name),
-          task:tasks(title)
+          task:tasks(title, project_id)
         `)
         .eq("project_id", projectId)
         .eq("workspace_id", activeWorkspace.id)
         .is("invoice_id", null)
         .order("date", { ascending: false });
 
-      if (teamError) throw teamError;
+      if (directError) throw directError;
+
+      // Fetch team_time_entries linked via task (where task belongs to this project)
+      let taskLinkedEntries: typeof directEntries = [];
+      if (projectTaskIds.length > 0) {
+        const { data: taskEntries, error: taskError } = await supabase
+          .from("team_time_entries")
+          .select(`
+            *,
+            project:projects(name),
+            task:tasks(title, project_id)
+          `)
+          .in("task_id", projectTaskIds)
+          .eq("workspace_id", activeWorkspace.id)
+          .is("invoice_id", null)
+          .order("date", { ascending: false });
+
+        if (taskError) throw taskError;
+        taskLinkedEntries = taskEntries || [];
+      }
+
+      // Merge and deduplicate entries
+      const allEntriesMap = new Map<string, typeof directEntries[0]>();
+      [...(directEntries || []), ...taskLinkedEntries].forEach(entry => {
+        allEntriesMap.set(entry.id, entry);
+      });
+      const allEntries = Array.from(allEntriesMap.values());
 
       // Fetch user profiles
-      const userIds = [...new Set((teamEntries || []).map(e => e.user_id).filter(Boolean))];
+      const userIds = [...new Set(allEntries.map(e => e.user_id).filter(Boolean))];
       let profilesMap = new Map<string, { full_name: string | null; avatar_url: string | null }>();
 
       if (userIds.length > 0) {
@@ -90,7 +125,7 @@ export function useBillableTime(projectId: string) {
 
       const defaultHourlyRate = (workspaceData?.daily_rate || 0) / 8;
 
-      return (teamEntries || []).map(entry => {
+      return allEntries.map(entry => {
         const hourlyRate = entry.hourly_rate || defaultHourlyRate;
         const amount = (entry.duration_minutes / 60) * hourlyRate;
         
@@ -100,7 +135,7 @@ export function useBillableTime(projectId: string) {
           hourly_rate: hourlyRate,
           amount,
         } as BillableTimeEntry;
-      });
+      }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
     },
     enabled: !!activeWorkspace && !!projectId,
   });
@@ -191,12 +226,21 @@ export function useInvoicedTime(projectId: string) {
     queryFn: async () => {
       if (!activeWorkspace || !projectId) return [];
 
-      const { data, error } = await supabase
+      // First, get task IDs that belong to this project
+      const { data: projectTasks } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("project_id", projectId);
+
+      const projectTaskIds = (projectTasks || []).map(t => t.id);
+
+      // Fetch entries with direct project_id
+      const { data: directEntries, error: directError } = await supabase
         .from("team_time_entries")
         .select(`
           *,
           project:projects(name),
-          task:tasks(title),
+          task:tasks(title, project_id),
           invoice:invoices(id, invoice_number, invoice_date)
         `)
         .eq("project_id", projectId)
@@ -204,8 +248,36 @@ export function useInvoicedTime(projectId: string) {
         .not("invoice_id", "is", null)
         .order("invoiced_at", { ascending: false });
 
-      if (error) throw error;
-      return data || [];
+      if (directError) throw directError;
+
+      // Fetch entries linked via task
+      let taskLinkedEntries: typeof directEntries = [];
+      if (projectTaskIds.length > 0) {
+        const { data: taskEntries, error: taskError } = await supabase
+          .from("team_time_entries")
+          .select(`
+            *,
+            project:projects(name),
+            task:tasks(title, project_id),
+            invoice:invoices(id, invoice_number, invoice_date)
+          `)
+          .in("task_id", projectTaskIds)
+          .eq("workspace_id", activeWorkspace.id)
+          .not("invoice_id", "is", null)
+          .order("invoiced_at", { ascending: false });
+
+        if (taskError) throw taskError;
+        taskLinkedEntries = taskEntries || [];
+      }
+
+      // Merge and deduplicate
+      const allEntriesMap = new Map<string, typeof directEntries[0]>();
+      [...(directEntries || []), ...taskLinkedEntries].forEach(entry => {
+        allEntriesMap.set(entry.id, entry);
+      });
+      
+      return Array.from(allEntriesMap.values())
+        .sort((a, b) => new Date(b.invoiced_at || 0).getTime() - new Date(a.invoiced_at || 0).getTime());
     },
     enabled: !!activeWorkspace && !!projectId,
   });
