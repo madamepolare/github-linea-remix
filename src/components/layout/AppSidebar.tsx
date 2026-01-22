@@ -216,9 +216,9 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
     const content = (
       <div
         className={cn(
-          "relative flex items-center gap-2 px-1 py-1 text-sm transition-all duration-150",
+          "relative flex items-center gap-2 text-sm transition-all duration-150",
           "cursor-pointer select-none",
-          collapsed ? "justify-center" : "",
+          collapsed ? "justify-center px-0 py-0.5" : "px-1 py-1",
           active
             ? "text-foreground font-medium"
             : "text-foreground font-normal hover:text-foreground"
