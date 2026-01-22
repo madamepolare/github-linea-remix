@@ -740,87 +740,95 @@ export function QuoteLinesEditor({
       )}
 
       {lines.length > 0 && (
-        <>
+        <div className="space-y-3 pt-4">
           {/* Résumé des marges - conditionnel */}
           {features.showMarginSummary && <QuoteMarginSummary lines={lines} />}
           
-          <Card><CardContent className="py-3 sm:py-4 px-3 sm:px-6">
-            <div className="space-y-1.5 sm:space-y-2">
-              <div className="flex justify-between text-xs sm:text-sm"><span className="text-muted-foreground">Sous-total</span><span>{formatCurrency(subtotal)}</span></div>
-              {totalDiscount > 0 && <div className="flex justify-between text-xs sm:text-sm text-red-600"><span>Remises</span><span>-{formatCurrency(totalDiscount)}</span></div>}
-              <Separator />
-              <div className="flex justify-between font-medium text-sm sm:text-base"><span>Total HT</span><span>{formatCurrency(totalHT)}</span></div>
-              <div className="flex justify-between text-xs sm:text-sm text-muted-foreground"><span>TVA (20%)</span><span>{formatCurrency(tva)}</span></div>
-              <Separator />
-              <div className="flex justify-between text-base sm:text-lg font-semibold"><span>Total TTC</span><span>{formatCurrency(totalTTC)}</span></div>
-              
-              {/* Budget adjustment buttons */}
-              <Separator />
-              <div className="flex items-center justify-between pt-2">
-                <span className="text-xs text-muted-foreground">Ajuster le budget</span>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-                    onClick={() => adjustBudget(-0.1)}
-                    title="Réduire de 10%"
-                  >
-                    <TrendingDown className="h-3.5 w-3.5 mr-1" />
-                    -10%
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    onClick={() => adjustBudget(-0.05)}
-                    title="Réduire de 5%"
-                  >
-                    -5%
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-green-500 hover:text-green-600 hover:bg-green-50"
-                    onClick={() => adjustBudget(0.05)}
-                    title="Augmenter de 5%"
-                  >
-                    +5%
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 px-2 text-green-600 hover:text-green-700 hover:bg-green-50"
-                    onClick={() => adjustBudget(0.1)}
-                    title="Augmenter de 10%"
-                  >
-                    <TrendingUp className="h-3.5 w-3.5 mr-1" />
-                    +10%
-                  </Button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-7 px-2">
-                        <Circle className="h-3.5 w-3.5 mr-1" />
-                        Arrondir
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => roundPrices(10)}>
-                        Arrondir à 10€
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => roundPrices(50)}>
-                        Arrondir à 50€
-                      </DropdownMenuItem>
-                      <DropdownMenuItem onClick={() => roundPrices(100)}>
-                        Arrondir à 100€
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
+          {/* Totals - plain text without Card */}
+          <div className="space-y-1.5 px-1">
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>Sous-total</span>
+              <span>{formatCurrency(subtotal)}</span>
             </div>
-          </CardContent></Card>
-        </>
+            {totalDiscount > 0 && (
+              <div className="flex justify-between text-xs text-red-600">
+                <span>Remises</span>
+                <span>-{formatCurrency(totalDiscount)}</span>
+              </div>
+            )}
+            <Separator className="my-2" />
+            <div className="flex justify-between text-sm font-medium">
+              <span>Total HT</span>
+              <span>{formatCurrency(totalHT)}</span>
+            </div>
+            <div className="flex justify-between text-xs text-muted-foreground">
+              <span>TVA (20%)</span>
+              <span>{formatCurrency(tva)}</span>
+            </div>
+            <div className="flex justify-between text-base font-semibold pt-1">
+              <span>Total TTC</span>
+              <span>{formatCurrency(totalTTC)}</span>
+            </div>
+          </div>
+          
+          {/* Budget adjustment buttons */}
+          <div className="flex items-center justify-between pt-2 px-1">
+            <span className="text-xs text-muted-foreground">Ajuster</span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+                onClick={() => adjustBudget(-0.1)}
+              >
+                -10%
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+                onClick={() => adjustBudget(-0.05)}
+              >
+                -5%
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-green-500 hover:text-green-600 hover:bg-green-50"
+                onClick={() => adjustBudget(0.05)}
+              >
+                +5%
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+                onClick={() => adjustBudget(0.1)}
+              >
+                +10%
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                    <Circle className="h-3 w-3 mr-1" strokeWidth={1.25} />
+                    Arrondir
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => roundPrices(10)}>
+                    Arrondir à 10€
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => roundPrices(50)}>
+                    Arrondir à 50€
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => roundPrices(100)}>
+                    Arrondir à 100€
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
