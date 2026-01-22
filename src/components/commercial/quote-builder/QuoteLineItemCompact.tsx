@@ -228,8 +228,8 @@ export function QuoteLineItemCompact({
             </TooltipContent>
           </Tooltip>
 
-          {/* Phase code dropdown - only for phase lines (Honoraires tab) */}
-          {activeTemplates.length > 0 && line.line_type === 'phase' && (
+          {/* Phase code dropdown - for phase and service/option lines */}
+          {activeTemplates.length > 0 && (line.line_type === 'phase' || line.line_type === 'service' || line.line_type === 'option' || line.line_type === 'expense') && (
             <Select
               value={line.phase_code || '__none__'}
               onValueChange={handlePhaseCodeChange}
@@ -257,10 +257,8 @@ export function QuoteLineItemCompact({
             </Badge>
           )}
 
-          {/* Phase code badge for non-editable display (not phase/service/option) */}
-          {(activeTemplates.length === 0 || (line.line_type !== 'phase' && line.line_type !== 'service')) && 
-           line.line_type !== 'option' && 
-           line.phase_code && (
+          {/* Phase code badge for non-editable display (discount only) */}
+          {activeTemplates.length === 0 && line.phase_code && (
             <Badge variant="outline" className="shrink-0 text-xs font-mono bg-muted/50">
               {line.phase_code}
             </Badge>
