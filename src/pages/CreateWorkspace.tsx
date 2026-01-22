@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Building2, ArrowLeft, Loader2 } from "lucide-react";
+import { Building2, ArrowLeft } from "lucide-react";
+import { ButtonLoader } from "@/components/ui/patterns";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -176,14 +177,8 @@ export default function CreateWorkspace() {
                   Annuler
                 </Button>
                 <Button type="submit" className="flex-1" disabled={isLoading}>
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Création...
-                    </>
-                  ) : (
-                    "Créer le workspace"
-                  )}
+                  {isLoading && <ButtonLoader />}
+                  {isLoading ? "Création..." : "Créer le workspace"}
                 </Button>
               </div>
             </form>

@@ -8,11 +8,11 @@ import {
   FileText,
   ExternalLink,
   Sparkles,
-  Loader2,
   Users,
   AlertCircle,
   Settings,
 } from "lucide-react";
+import { ButtonLoader } from "@/components/ui/patterns";
 import {
   Dialog,
   DialogContent,
@@ -349,8 +349,8 @@ Cordialement`;
           >
             {isSending ? (
               <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Envoi en cours...
+                <ButtonLoader />
+                <span className="ml-2">Envoi en cours...</span>
               </>
             ) : (
               <>
