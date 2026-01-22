@@ -89,12 +89,6 @@ export function QuoteLinesEditor({
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
   const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
-  
-  // Global toggle for percentage pricing mode
-  const [percentageModeEnabled, setPercentageModeEnabled] = useState(() => {
-    // Initialize based on existing lines
-    return lines.some(l => l.pricing_mode === 'percentage');
-  });
 
   // Get feature flags from context
   const features = useLineFeatures();
@@ -569,198 +563,79 @@ export function QuoteLinesEditor({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Pricing Mode Selector - Clear 3 options */}
-      <div className="p-4 bg-muted/20 rounded-lg border space-y-4">
-        <div className="flex items-center gap-2 mb-3">
-          <Calculator className="h-4 w-4 text-muted-foreground" strokeWidth={1.5} />
-          <Label className="text-sm font-medium">Mode de tarification</Label>
-        </div>
-        
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {/* Fixed only mode */}
-          <button
-            type="button"
-            onClick={() => setPercentageModeEnabled(false)}
-            className={cn(
-              "p-3 rounded-lg border-2 text-left transition-all",
-              !percentageModeEnabled 
-                ? "border-primary bg-primary/5" 
-                : "border-transparent bg-muted/30 hover:bg-muted/50"
-            )}
-          >
-            <div className="flex items-center gap-2 mb-1">
-              <Euro className="h-4 w-4 text-emerald-600" strokeWidth={1.5} />
-              <span className="font-medium text-sm">Forfaitaire</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Prix fixes (quantité × prix unitaire)
-            </p>
-          </button>
-
-          {/* Percentage only mode */}
-          <button
-            type="button"
-            onClick={() => setPercentageModeEnabled(true)}
-            className={cn(
-              "p-3 rounded-lg border-2 text-left transition-all",
-              percentageModeEnabled 
-                ? "border-primary bg-primary/5" 
-                : "border-transparent bg-muted/30 hover:bg-muted/50"
-            )}
-          >
-            <div className="flex items-center gap-2 mb-1">
+      {/* Budget & Fee Configuration - shown only when there are percentage lines */}
+      {hasPercentageLines && (
+        <div className="flex flex-wrap items-center gap-4 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100/50 dark:bg-blue-900/30 rounded-lg">
               <Percent className="h-4 w-4 text-blue-600" strokeWidth={1.5} />
-              <span className="font-medium text-sm">Honoraires %</span>
+              <span className="text-xs text-muted-foreground">Honoraires</span>
+              <span className="text-lg font-bold text-primary">
+                {formatCurrency(percentageTotal)}
+              </span>
             </div>
-            <p className="text-xs text-muted-foreground">
-              Phases calculées sur budget travaux
-            </p>
-          </button>
+            <span className="text-xs text-muted-foreground">
+              ({totalPercentage.toFixed(1)}%)
+            </span>
+          </div>
 
-          {/* Mixed mode info */}
-          <div className="p-3 rounded-lg border-2 border-dashed border-muted-foreground/20 bg-muted/10">
-            <div className="flex items-center gap-2 mb-1">
-              <div className="flex -space-x-1">
-                <Percent className="h-3.5 w-3.5 text-blue-600" strokeWidth={1.5} />
-                <Euro className="h-3.5 w-3.5 text-emerald-600" strokeWidth={1.5} />
-              </div>
-              <span className="font-medium text-sm text-muted-foreground">Mixte</span>
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Activez "%" puis ajoutez des lignes forfaitaires
-            </p>
+          <div className="h-6 w-px bg-border" />
+
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+              Budget travaux
+            </Label>
+            <Input
+              type="number"
+              value={constructionBudget || ''}
+              onChange={(e) => onDocumentChange({ 
+                ...document, 
+                construction_budget: parseFloat(e.target.value) || 0 
+              })}
+              placeholder="150000"
+              className="h-7 w-28 text-xs"
+            />
+            <span className="text-xs text-muted-foreground">€</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground whitespace-nowrap">
+              Taux
+            </Label>
+            <Input
+              type="number"
+              value={feePercentage || ''}
+              onChange={(e) => onDocumentChange({ 
+                ...document, 
+                fee_percentage: parseFloat(e.target.value) || 0 
+              })}
+              placeholder="12"
+              step="0.5"
+              className="h-7 w-16 text-xs"
+            />
+            <span className="text-xs text-muted-foreground">%</span>
+          </div>
+
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="disclose-budget"
+              checked={document.construction_budget_disclosed ?? false}
+              onCheckedChange={(checked) => 
+                onDocumentChange({ 
+                  ...document, 
+                  construction_budget_disclosed: checked as boolean 
+                })
+              }
+              className="h-4 w-4"
+            />
+            <Label htmlFor="disclose-budget" className="text-xs text-muted-foreground">
+              Afficher sur doc
+            </Label>
           </div>
         </div>
-
-        {/* Budget & Fee Configuration - shown only when percentage mode is enabled */}
-        {percentageModeEnabled && (
-          <div className="flex flex-wrap items-center gap-4 pt-3 border-t">
-            {/* If we have percentage lines, show the estimated amount prominently */}
-            {hasPercentageLines ? (
-              <>
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100/50 dark:bg-blue-900/30 rounded-lg">
-                    <span className="text-xs text-muted-foreground">Honoraires estimés</span>
-                    <span className="text-lg font-bold text-primary">
-                      {formatCurrency(percentageTotal)}
-                    </span>
-                  </div>
-                  <span className="text-xs text-muted-foreground">
-                    sur {formatCurrency(constructionBudget)} ({totalPercentage.toFixed(1)}%)
-                  </span>
-                </div>
-
-                <div className="h-6 w-px bg-border" />
-
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                    Budget
-                  </Label>
-                  <Input
-                    type="number"
-                    value={constructionBudget || ''}
-                    onChange={(e) => onDocumentChange({ 
-                      ...document, 
-                      construction_budget: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="150000"
-                    className="h-7 w-28 text-xs"
-                  />
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
-                    Taux
-                  </Label>
-                  <Input
-                    type="number"
-                    value={feePercentage || ''}
-                    onChange={(e) => onDocumentChange({ 
-                      ...document, 
-                      fee_percentage: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="12"
-                    step="0.5"
-                    className="h-7 w-16 text-xs"
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-              </>
-            ) : (
-              /* No percentage lines yet - prompt to enter budget */
-              <>
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-                    <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
-                    Budget travaux
-                  </Label>
-                  <Input
-                    type="number"
-                    value={constructionBudget || ''}
-                    onChange={(e) => onDocumentChange({ 
-                      ...document, 
-                      construction_budget: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="Ex: 150000"
-                    className="h-8 w-36 text-sm"
-                  />
-                  <span className="text-xs text-muted-foreground">€ HT</span>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-                    <Percent className="h-3.5 w-3.5" strokeWidth={1.25} />
-                    Taux honoraires
-                  </Label>
-                  <Input
-                    type="number"
-                    value={feePercentage || ''}
-                    onChange={(e) => onDocumentChange({ 
-                      ...document, 
-                      fee_percentage: parseFloat(e.target.value) || 0 
-                    })}
-                    placeholder="12"
-                    step="0.5"
-                    className="h-8 w-20 text-sm"
-                  />
-                  <span className="text-xs text-muted-foreground">%</span>
-                </div>
-
-                {constructionBudget > 0 && feePercentage > 0 && (
-                  <>
-                    <div className="h-6 w-px bg-border" />
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold text-primary">
-                        {formatCurrency(totalFees)}
-                      </span>
-                      <span className="text-xs text-muted-foreground">honoraires à répartir</span>
-                    </div>
-                  </>
-                )}
-              </>
-            )}
-
-            <div className="flex-1" />
-
-            <div className="flex items-center gap-2">
-              <Checkbox
-                id="disclose-budget"
-                checked={document.construction_budget_disclosed ?? false}
-                onCheckedChange={(checked) => 
-                  onDocumentChange({ 
-                    ...document, 
-                    construction_budget_disclosed: checked as boolean 
-                  })
-                }
-                className="h-4 w-4"
-              />
-              <Label htmlFor="disclose-budget" className="text-xs text-muted-foreground">
-                Afficher sur doc
-              </Label>
-            </div>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* Action bar */}
       <div className="flex items-center gap-2">
