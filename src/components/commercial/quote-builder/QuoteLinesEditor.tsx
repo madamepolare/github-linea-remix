@@ -73,6 +73,7 @@ interface QuoteLinesEditorProps {
   onLinesChange: (lines: QuoteLine[]) => void;
   document: Partial<QuoteDocument>;
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
+  isLocked?: boolean;
 }
 
 function generateId() {
@@ -83,7 +84,8 @@ export function QuoteLinesEditor({
   lines,
   onLinesChange,
   document,
-  onDocumentChange
+  onDocumentChange,
+  isLocked = false
 }: QuoteLinesEditorProps) {
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());

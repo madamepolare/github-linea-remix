@@ -45,9 +45,10 @@ interface QuoteInvoicingTabProps {
   document: Partial<QuoteDocument>;
   onDocumentChange: (updates: Partial<QuoteDocument>) => void;
   lines: QuoteLine[];
+  isLocked?: boolean;
 }
 
-export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteInvoicingTabProps) {
+export function QuoteInvoicingTab({ document, onDocumentChange, lines, isLocked = false }: QuoteInvoicingTabProps) {
   const [plannedInvoices, setPlannedInvoices] = useState<PlannedInvoice[]>([]);
   const [monthlyDialogOpen, setMonthlyDialogOpen] = useState(false);
   const [monthCount, setMonthCount] = useState(3);
