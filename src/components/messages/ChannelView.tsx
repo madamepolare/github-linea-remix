@@ -68,9 +68,15 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
     markChannelAsRead.mutate(channel.id);
   }, [channel.id]);
 
-  // Scroll to bottom on new messages
+  // Scroll to bottom on new messages (within the scroll container only)
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    if (bottomRef.current && scrollRef.current) {
+      // Use scrollTop on the container instead of scrollIntoView to avoid page scroll
+      const scrollContainer = scrollRef.current.querySelector('[data-radix-scroll-area-viewport]');
+      if (scrollContainer) {
+        scrollContainer.scrollTop = scrollContainer.scrollHeight;
+      }
+    }
   }, [messages?.length]);
 
   const handleSendMessage = async (content: string, mentions: string[], attachments?: { url: string; name: string; type: string; size: number }[], parentId?: string) => {
