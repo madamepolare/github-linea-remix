@@ -955,40 +955,38 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               </Button>
             </div>
             
-            {/* Liste des membres - overflow hidden, sync via same container */}
-            <div className="flex-1 overflow-hidden">
-              <div id="members-scroll-content">
-                {filteredMembers.length === 0 ? (
-                  <div className="p-4 text-center text-sm text-muted-foreground">
-                    {teamColumnCollapsed ? '' : 'Aucun membre'}
-                  </div>
-                ) : (
-                  filteredMembers.map(member => (
-                    <div
-                      key={member.user_id}
-                      className={`flex items-center border-b hover:bg-muted/30 transition-colors ${teamColumnCollapsed ? 'justify-center px-2' : 'px-4 gap-3'}`}
-                      style={{ height: ROW_HEIGHT }}
-                    >
-                      <Avatar className={`${teamColumnCollapsed ? 'h-10 w-10' : 'h-11 w-11'} ring-2 ring-background shadow-md shrink-0`}>
-                        <AvatarImage src={member.profile?.avatar_url || ""} />
-                        <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
-                          {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-                      {!teamColumnCollapsed && (
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium text-sm truncate">
-                            {member.profile?.full_name || "Membre"}
-                          </div>
-                          <div className="text-xs text-muted-foreground truncate">
-                            {member.profile?.job_title || member.role}
-                          </div>
+            {/* Liste des membres - overflow hidden, sync via scroll event */}
+            <div id="members-scroll-container" className="flex-1 overflow-hidden">
+              {filteredMembers.length === 0 ? (
+                <div className="p-4 text-center text-sm text-muted-foreground">
+                  {teamColumnCollapsed ? '' : 'Aucun membre'}
+                </div>
+              ) : (
+                filteredMembers.map(member => (
+                  <div
+                    key={member.user_id}
+                    className={`flex items-center border-b hover:bg-muted/30 transition-colors ${teamColumnCollapsed ? 'justify-center px-2' : 'px-4 gap-3'}`}
+                    style={{ height: ROW_HEIGHT }}
+                  >
+                    <Avatar className={`${teamColumnCollapsed ? 'h-10 w-10' : 'h-11 w-11'} ring-2 ring-background shadow-md shrink-0`}>
+                      <AvatarImage src={member.profile?.avatar_url || ""} />
+                      <AvatarFallback className="bg-gradient-to-br from-primary to-primary/70 text-primary-foreground text-sm font-medium">
+                        {(member.profile?.full_name || "?").charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {!teamColumnCollapsed && (
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-sm truncate">
+                          {member.profile?.full_name || "Membre"}
                         </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
+                        <div className="text-xs text-muted-foreground truncate">
+                          {member.profile?.job_title || member.role}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -998,9 +996,9 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             onScroll={(e) => {
               // Sync vertical scroll with members column
               const scrollTop = (e.target as HTMLElement).scrollTop;
-              const membersContent = document.getElementById('members-scroll-content');
-              if (membersContent) {
-                membersContent.style.transform = `translateY(-${scrollTop}px)`;
+              const membersContainer = document.getElementById('members-scroll-container');
+              if (membersContainer) {
+                membersContainer.scrollTop = scrollTop;
               }
             }}
           >
