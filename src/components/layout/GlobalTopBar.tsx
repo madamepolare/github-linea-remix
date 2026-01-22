@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Search,
@@ -19,6 +19,7 @@ import {
   Sunrise,
   Moon,
   PenLine,
+  MessageSquare,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -166,9 +167,49 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
     await signOut();
     navigate("/auth");
   };
+  const location = useLocation();
+  const isMessagesPage = location.pathname.startsWith("/messages");
+  const isDirectFilter = location.pathname === "/messages/direct" || location.pathname.startsWith("/messages/direct/");
+
+  const handleMessagesFilterChange = (filter: "all" | "direct") => {
+    navigate(filter === "direct" ? "/messages/direct" : "/messages");
+  };
 
   return (
     <div className="h-12 flex items-center gap-4 px-4 border-b border-border bg-background">
+      {/* Messages Page: Title + Filters */}
+      {isMessagesPage && (
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2">
+            <MessageSquare className="h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
+            <span className="font-semibold text-sm">Messages</span>
+          </div>
+          <div className="flex items-center gap-0.5 p-0.5 bg-muted/50 rounded-lg">
+            <button
+              onClick={() => handleMessagesFilterChange("all")}
+              className={cn(
+                "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                !isDirectFilter
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => handleMessagesFilterChange("direct")}
+              className={cn(
+                "px-3 py-1 text-sm font-medium rounded-md transition-colors",
+                isDirectFilter
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Messages directs
+            </button>
+          </div>
+        </div>
+      )}
       {/* Search - Fully extends to fill available space */}
       <div ref={searchRef} className="relative flex-1 min-w-0">
         <Popover open={searchOpen && (searchQuery.length >= 2 || (searchResults?.length ?? 0) > 0)}>

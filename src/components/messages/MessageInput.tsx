@@ -323,14 +323,14 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
         </div>
       )}
 
-      {/* Main input container - chat bubble style */}
+      {/* Main input container - Clean single-line design */}
       <div 
         className={cn(
-          "relative flex items-end rounded-2xl bg-muted/50 transition-all duration-200",
+          "relative flex items-center gap-1 rounded-xl border bg-background transition-all duration-200",
           isDragging && "opacity-0"
         )}
       >
-        {/* Attach button - inside left */}
+        {/* Attach button */}
         <input
           ref={fileInputRef}
           type="file"
@@ -344,17 +344,17 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
           size="icon-sm" 
           onClick={() => fileInputRef.current?.click()}
           disabled={isUploading}
-          className="shrink-0 h-9 w-9 ml-1.5 text-muted-foreground hover:text-foreground transition-colors"
+          className="shrink-0 h-10 w-10 text-muted-foreground hover:text-foreground transition-colors"
         >
           {isUploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
-            <Paperclip className="h-4 w-4" />
+            <Paperclip className="h-4 w-4" strokeWidth={1.5} />
           )}
         </Button>
 
-        {/* Text input */}
-        <div className="flex-1 min-w-0 py-1" onKeyDown={handleKeyDown}>
+        {/* Text input - grows to fill */}
+        <div className="flex-1 min-w-0 py-2" onKeyDown={handleKeyDown}>
           <MentionInput
             value={content}
             onChange={(val, extractedMentions) => {
@@ -362,58 +362,70 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
               setMentions(extractedMentions);
             }}
             placeholder={placeholder || `Message...`}
-            minHeight="36px"
-            className="border-0 bg-transparent shadow-none focus-visible:ring-0 resize-none text-base"
+            minHeight="24px"
+            className="border-0 bg-transparent shadow-none focus-visible:ring-0 resize-none text-sm min-h-[24px] py-0"
           />
         </div>
 
-        {/* GIF Picker - Hidden on mobile */}
-        <Popover open={showGifPicker} onOpenChange={setShowGifPicker}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="h-9 w-9 hidden md:flex text-muted-foreground hover:text-foreground">
-              <GifIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
-            <GifPicker 
-              onSelect={handleGifSelect}
-              onClose={() => setShowGifPicker(false)}
-            />
-          </PopoverContent>
-        </Popover>
+        {/* Right side actions */}
+        <div className="flex items-center shrink-0">
+          {/* GIF Picker - Desktop only */}
+          <Popover open={showGifPicker} onOpenChange={setShowGifPicker}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon-sm" 
+                className="h-10 w-10 hidden md:flex text-muted-foreground hover:text-foreground"
+              >
+                <GifIcon className="h-4 w-4" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+              <GifPicker 
+                onSelect={handleGifSelect}
+                onClose={() => setShowGifPicker(false)}
+              />
+            </PopoverContent>
+          </Popover>
 
-        {/* Emoji Picker - Hidden on mobile */}
-        <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon-sm" className="h-9 w-9 hidden md:flex text-muted-foreground hover:text-foreground">
-              <Smile className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
-            <EmojiPicker 
-              onSelect={insertEmoji}
-              onClose={() => setShowEmojiPicker(false)}
-            />
-          </PopoverContent>
-        </Popover>
+          {/* Emoji Picker - Desktop only */}
+          <Popover open={showEmojiPicker} onOpenChange={setShowEmojiPicker}>
+            <PopoverTrigger asChild>
+              <Button 
+                variant="ghost" 
+                size="icon-sm" 
+                className="h-10 w-10 hidden md:flex text-muted-foreground hover:text-foreground"
+              >
+                <Smile className="h-4 w-4" strokeWidth={1.5} />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="end" sideOffset={8}>
+              <EmojiPicker 
+                onSelect={insertEmoji}
+                onClose={() => setShowEmojiPicker(false)}
+              />
+            </PopoverContent>
+          </Popover>
 
-        {/* Send button - inside right, rounded */}
-        <Button 
-          size="icon"
-          onClick={handleSubmit}
-          disabled={(!content.trim() && attachments.length === 0) || isLoading || isUploading}
-          className={cn(
-            "shrink-0 h-9 w-9 mr-1.5 mb-1.5 rounded-full transition-all duration-200",
-            (content.trim() || attachments.length > 0) && !isLoading && !isUploading
-              ? "bg-primary text-primary-foreground shadow-md hover:shadow-lg hover:scale-105" 
-              : "bg-muted text-muted-foreground"
-          )}
-        >
-          <Send className={cn(
-            "h-4 w-4 transition-transform",
-            (content.trim() || attachments.length > 0) && "-rotate-45"
-          )} />
-        </Button>
+          {/* Send button */}
+          <Button 
+            size="icon"
+            variant="ghost"
+            onClick={handleSubmit}
+            disabled={(!content.trim() && attachments.length === 0) || isLoading || isUploading}
+            className={cn(
+              "shrink-0 h-10 w-10 rounded-lg transition-all duration-200",
+              (content.trim() || attachments.length > 0) && !isLoading && !isUploading
+                ? "text-primary hover:bg-primary/10" 
+                : "text-muted-foreground"
+            )}
+          >
+            <Send className={cn(
+              "h-4 w-4 transition-transform",
+              (content.trim() || attachments.length > 0) && "-rotate-45"
+            )} strokeWidth={1.5} />
+          </Button>
+        </div>
       </div>
     </div>
   );

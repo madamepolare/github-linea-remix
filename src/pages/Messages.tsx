@@ -119,9 +119,9 @@ export default function Messages() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] md:h-[calc(100vh-4rem)] overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
       {/* Desktop: Channel Sidebar */}
-      <div className="w-72 border-r flex-shrink-0 hidden md:flex flex-col bg-card/50">
+      <div className="w-64 border-r flex-shrink-0 hidden md:flex flex-col bg-card/50">
         <ChannelList
           channels={channels || []}
           activeChannelId={activeChannelId}
