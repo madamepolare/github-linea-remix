@@ -87,6 +87,12 @@ export function QuoteLinesEditor({
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  
+  // Global toggle for percentage pricing mode
+  const [percentageModeEnabled, setPercentageModeEnabled] = useState(() => {
+    // Initialize based on existing lines
+    return lines.some(l => l.pricing_mode === 'percentage');
+  });
 
   // Get feature flags from context
   const features = useLineFeatures();
@@ -558,11 +564,55 @@ export function QuoteLinesEditor({
     </Draggable>
   );
 
+  // Handle toggle for percentage mode
+  const handlePercentageModeToggle = (enabled: boolean) => {
+    setPercentageModeEnabled(enabled);
+    
+    if (!enabled) {
+      // Convert all percentage lines to fixed
+      const updatedLines = lines.map(line => {
+        if (line.pricing_mode === 'percentage') {
+          return { ...line, pricing_mode: 'fixed' as const };
+        }
+        return line;
+      });
+      onLinesChange(updatedLines);
+    }
+  };
+
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Budget & Fee Configuration - shown only when lines use percentage pricing */}
-      {hasPercentageLines && (
-        <div className="flex flex-wrap items-center gap-4 p-3 bg-muted/30 rounded-lg border border-dashed">
+      {/* Global percentage mode toggle */}
+      <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border">
+        <div className="flex items-center gap-3">
+          <div className={cn(
+            "p-2 rounded-lg",
+            percentageModeEnabled ? "bg-blue-100 text-blue-700" : "bg-muted text-muted-foreground"
+          )}>
+            <Percent className="h-4 w-4" strokeWidth={1.5} />
+          </div>
+          <div>
+            <Label className="text-sm font-medium">Mode honoraires %</Label>
+            <p className="text-xs text-muted-foreground">
+              Calculer les phases en pourcentage du budget travaux
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button
+            variant={percentageModeEnabled ? "default" : "outline"}
+            size="sm"
+            className="h-8"
+            onClick={() => handlePercentageModeToggle(!percentageModeEnabled)}
+          >
+            {percentageModeEnabled ? "Activé" : "Désactivé"}
+          </Button>
+        </div>
+      </div>
+
+      {/* Budget & Fee Configuration - shown only when percentage mode is enabled */}
+      {percentageModeEnabled && (
+        <div className="flex flex-wrap items-center gap-4 p-3 bg-blue-50/50 dark:bg-blue-950/20 rounded-lg border border-blue-200/50 dark:border-blue-800/30">
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
               <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
