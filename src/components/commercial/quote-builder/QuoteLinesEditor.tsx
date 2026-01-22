@@ -1014,23 +1014,59 @@ export function QuoteLinesEditor({
             {/* Percentage-based lines section */}
             {percentageLines.length > 0 && (
               <div className="space-y-2">
-                <div className="flex items-center gap-2 px-2 py-1.5">
-                  <div className="flex items-center gap-1.5 text-blue-600">
-                    <Percent className="h-3.5 w-3.5" strokeWidth={1.5} />
-                    <span className="text-xs font-medium">Honoraires %</span>
+                {/* Honoraires summary header - like the reference image */}
+                <div className="flex items-center gap-3 px-3 py-2.5 bg-blue-50/50 border border-blue-100 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Percent className="h-4 w-4 text-blue-600" strokeWidth={1.5} />
+                    <span className="text-sm text-muted-foreground">Honoraires</span>
+                    <span className="text-lg font-bold text-foreground tabular-nums">
+                      {formatCurrency(percentageTotal)}
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      ({document.fee_percentage || 12}% du budget)
+                    </span>
                   </div>
-                  <div className="flex-1 h-px bg-blue-200" />
+                  
+                  <Separator orientation="vertical" className="h-5" />
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Budget travaux</span>
+                    <Input
+                      type="number"
+                      value={document.construction_budget || ''}
+                      onChange={(e) => onDocumentChange({ construction_budget: parseFloat(e.target.value) || 0 })}
+                      className="w-28 h-7 text-sm"
+                      placeholder="0"
+                    />
+                    <span className="text-xs text-muted-foreground">€</span>
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Taux</span>
+                    <Input
+                      type="number"
+                      value={document.fee_percentage || ''}
+                      onChange={(e) => onDocumentChange({ fee_percentage: parseFloat(e.target.value) || 0 })}
+                      className="w-16 h-7 text-sm"
+                      placeholder="12"
+                    />
+                    <span className="text-xs text-muted-foreground">%</span>
+                  </div>
+                  
+                  <div className="flex-1" />
+                  
                   <Badge 
                     variant="secondary" 
                     className={cn(
                       "text-[10px]",
                       Math.abs(totalPercentageFee - 100) < 0.1 
                         ? "bg-green-50 text-green-700" 
-                        : "bg-blue-50 text-blue-700"
+                        : "bg-amber-50 text-amber-700"
                     )}
                   >
-                    {totalPercentageFee.toFixed(1)}%
+                    {totalPercentageFee.toFixed(1)}% mission
                   </Badge>
+                  
                   {Math.abs(totalPercentageFee - 100) >= 0.1 && percentageLines.length > 0 && (
                     <Button
                       variant="ghost"
@@ -1059,12 +1095,9 @@ export function QuoteLinesEditor({
                         onLinesChange(updatedLines);
                       }}
                     >
-                      Ajuster à 100%
+                      → 100%
                     </Button>
                   )}
-                  <span className="text-xs font-semibold text-blue-700 tabular-nums">
-                    {formatCurrency(percentageTotal)}
-                  </span>
                 </div>
                 <Droppable droppableId="percentage">
                   {(provided, snapshot) => (
@@ -1152,30 +1185,31 @@ export function QuoteLinesEditor({
       {lines.length > 0 && (
         <div className="space-y-3 pt-4">
           
-          {/* Totals - plain text without Card */}
-          <div className="space-y-1.5 px-1">
-            <div className="flex justify-between text-xs text-muted-foreground">
+          {/* Totals - larger and more readable */}
+          <div className="space-y-2 px-2 py-3 bg-muted/30 rounded-lg">
+            <div className="flex justify-between text-sm text-muted-foreground">
               <span>Sous-total</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span className="tabular-nums">{formatCurrency(subtotal)}</span>
             </div>
             {totalDiscount > 0 && (
-              <div className="flex justify-between text-xs text-red-600">
+              <div className="flex justify-between text-sm text-red-600">
                 <span>Remises</span>
-                <span>-{formatCurrency(totalDiscount)}</span>
+                <span className="tabular-nums">-{formatCurrency(totalDiscount)}</span>
               </div>
             )}
-            <Separator className="my-2" />
-            <div className="flex justify-between text-sm font-medium">
+            <Separator className="my-1" />
+            <div className="flex justify-between text-base font-medium">
               <span>Total HT</span>
-              <span>{formatCurrency(totalHT)}</span>
+              <span className="tabular-nums">{formatCurrency(totalHT)}</span>
             </div>
-            <div className="flex justify-between text-xs text-muted-foreground">
+            <div className="flex justify-between text-sm text-muted-foreground">
               <span>TVA (20%)</span>
-              <span>{formatCurrency(tva)}</span>
+              <span className="tabular-nums">{formatCurrency(tva)}</span>
             </div>
-            <div className="flex justify-between text-base font-semibold pt-1">
+            <Separator className="my-1" />
+            <div className="flex justify-between text-xl font-bold pt-1">
               <span>Total TTC</span>
-              <span>{formatCurrency(totalTTC)}</span>
+              <span className="tabular-nums">{formatCurrency(totalTTC)}</span>
             </div>
           </div>
           
