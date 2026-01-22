@@ -85,23 +85,24 @@
 
     /* =========================================================================
        3. BORDER RADIUS
+       Dynamic: --radius is the base (set by Design System), others scale from it
        ========================================================================= */
+    --radius: 0.5rem;             /* 8px - Base radius, updated by Design System */
     --radius-none: 0;
-    --radius-sm: 0.375rem;    /* 6px - Small elements like badges */
-    --radius-md: 0.5rem;      /* 8px - Default for inputs, buttons */
-    --radius-lg: 0.625rem;    /* 10px - Cards, dialogs */
-    --radius-xl: 0.75rem;     /* 12px - Large cards, modals */
-    --radius-2xl: 1rem;       /* 16px - Hero sections */
-    --radius-3xl: 1.5rem;     /* 24px - Special elements */
-    --radius-full: 9999px;    /* Circular elements */
+    --radius-sm: calc(var(--radius) * 0.75);     /* ~6px */
+    --radius-md: var(--radius);                   /* 8px - Same as base */
+    --radius-lg: calc(var(--radius) * 1.25);     /* ~10px */
+    --radius-xl: calc(var(--radius) * 1.5);      /* ~12px */
+    --radius-2xl: calc(var(--radius) * 2);       /* ~16px */
+    --radius-3xl: calc(var(--radius) * 3);       /* ~24px */
+    --radius-full: 9999px;                        /* Circular elements */
     
-    /* Semantic radius aliases */
-    --radius: var(--radius-md);               /* Default radius */
-    --radius-button: var(--radius-lg);        /* Buttons */
-    --radius-input: var(--radius-lg);         /* Inputs */
-    --radius-card: var(--radius-xl);          /* Cards */
-    --radius-dialog: var(--radius-xl);        /* Dialogs/modals */
-    --radius-badge: var(--radius-full);       /* Badges, pills */
+    /* Semantic radius aliases - all scale from base */
+    --radius-button: var(--radius-lg);
+    --radius-input: var(--radius-lg);
+    --radius-card: var(--radius-xl);
+    --radius-dialog: var(--radius-xl);
+    --radius-badge: var(--radius-full);
 
     /* =========================================================================
        4. SHADOWS
