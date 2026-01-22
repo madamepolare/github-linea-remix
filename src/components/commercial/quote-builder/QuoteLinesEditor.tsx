@@ -566,20 +566,11 @@ export function QuoteLinesEditor({
     </Draggable>
   );
 
-  // Handle toggle for percentage mode
+  // Handle toggle for percentage mode - no longer converts existing lines
   const handlePercentageModeToggle = (enabled: boolean) => {
     setPercentageModeEnabled(enabled);
-    
-    if (!enabled) {
-      // Convert all percentage lines to fixed
-      const updatedLines = lines.map(line => {
-        if (line.pricing_mode === 'percentage') {
-          return { ...line, pricing_mode: 'fixed' as const };
-        }
-        return line;
-      });
-      onLinesChange(updatedLines);
-    }
+    // Mode mixte: on ne convertit plus automatiquement les lignes
+    // L'utilisateur peut avoir des lignes % ET des lignes forfaitaires
   };
 
   return (
@@ -696,32 +687,6 @@ export function QuoteLinesEditor({
               Ajouter
             </Button>
           </DropdownMenuTrigger>
-        
-        {/* Clear all button - only show when there are lines */}
-        {lines.length > 0 && (
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => setClearAllDialogOpen(true)}
-          >
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
-            Tout effacer
-          </Button>
-        )}
-        
-        {/* Clear all confirmation dialog */}
-        <DeleteDialog
-          open={clearAllDialogOpen}
-          onOpenChange={setClearAllDialogOpen}
-          title="Effacer toutes les lignes"
-          description={`Êtes-vous sûr de vouloir supprimer les ${lines.length} ligne(s) du devis ? Cette action est irréversible.`}
-          confirmLabel="Tout effacer"
-          onConfirm={() => {
-            onLinesChange([]);
-            setClearAllDialogOpen(false);
-          }}
-        />
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem onClick={addGroup}>
               <FolderPlus className="h-4 w-4 mr-2" strokeWidth={1.25} />
@@ -839,7 +804,36 @@ export function QuoteLinesEditor({
           <Sparkles className="h-3.5 w-3.5" strokeWidth={1.25} />
           Générer IA
         </Button>
+
+        {/* Spacer to push clear button to right */}
+        <div className="flex-1" />
+
+        {/* Clear all button - positioned at right */}
+        {lines.length > 0 && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setClearAllDialogOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
+            Tout effacer
+          </Button>
+        )}
       </div>
+
+      {/* Clear all confirmation dialog */}
+      <DeleteDialog
+        open={clearAllDialogOpen}
+        onOpenChange={setClearAllDialogOpen}
+        title="Effacer toutes les lignes"
+        description={`Êtes-vous sûr de vouloir supprimer les ${lines.length} ligne(s) du devis ? Cette action est irréversible.`}
+        confirmLabel="Tout effacer"
+        onConfirm={() => {
+          onLinesChange([]);
+          setClearAllDialogOpen(false);
+        }}
+      />
 
       {/* Template Dialog */}
       <Dialog open={showTemplateDialog} onOpenChange={setShowTemplateDialog}>
