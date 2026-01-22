@@ -6,6 +6,7 @@ import type { LineCategory, BillingType } from '@/hooks/useQuoteLineTemplates';
 export type DocumentType = 'quote';
 export type DocumentStatus = 'draft' | 'sent' | 'accepted' | 'rejected' | 'expired' | 'signed';
 export type FeeMode = 'fixed' | 'percentage' | 'hourly' | 'mixed';
+export type LinePricingMode = 'fixed' | 'percentage';
 
 export interface QuoteLineGroup {
   id: string;
@@ -31,12 +32,15 @@ export interface QuoteLine {
   // Reference (for BPU)
   pricing_ref?: string;
   
+  // Pricing mode: 'percentage' uses construction_budget, 'fixed' uses unit_price
+  pricing_mode?: LinePricingMode;
+  
   // Pricing
   quantity: number;
   unit: string;
   unit_price: number;
   amount: number;
-  percentage_fee?: number;
+  percentage_fee?: number; // Used when pricing_mode is 'percentage'
   
   // Assignment
   assigned_member_id?: string;
@@ -192,6 +196,9 @@ export const LINE_TYPE_COLORS: Record<QuoteLine['line_type'], string> = {
 
 // Helper to convert old phases to new QuoteLine format
 export function phaseToQuoteLine(phase: any, index: number): QuoteLine {
+  // Determine pricing mode: if percentage_fee is set and no explicit pricing_mode, assume percentage
+  const pricingMode = phase.pricing_mode || (phase.percentage_fee ? 'percentage' : 'fixed');
+  
   return {
     id: phase.id || `line-${Date.now()}-${index}`,
     document_id: phase.document_id,
@@ -201,6 +208,7 @@ export function phaseToQuoteLine(phase: any, index: number): QuoteLine {
     line_type: phase.line_type || 'phase',
     group_id: phase.group_id,
     pricing_ref: phase.pricing_ref,
+    pricing_mode: pricingMode,
     quantity: phase.quantity || 1,
     unit: phase.unit || 'forfait',
     unit_price: phase.unit_price || phase.amount || 0,
@@ -231,6 +239,7 @@ export function quoteLineToPhase(line: QuoteLine): any {
     phase_description: line.phase_description,
     line_type: line.line_type,
     pricing_ref: line.pricing_ref,
+    pricing_mode: line.pricing_mode || 'fixed',
     percentage_fee: line.percentage_fee,
     amount: line.amount,
     is_included: line.is_included,

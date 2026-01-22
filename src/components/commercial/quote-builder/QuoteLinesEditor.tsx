@@ -1,10 +1,12 @@
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -47,7 +49,10 @@ import {
   TrendingDown,
   Target,
   Circle,
-  Loader2
+  Loader2,
+  Euro,
+  Percent,
+  Calculator
 } from 'lucide-react';
 import { QuoteDocument, QuoteLine, LINE_TYPE_COLORS } from '@/types/quoteTypes';
 import { supabase } from '@/integrations/supabase/client';
@@ -114,13 +119,44 @@ export function QuoteLinesEditor({
     return getGroupLines(groupId).filter(l => l.is_included && l.line_type !== 'discount').reduce((sum, l) => sum + (l.amount || 0), 0);
   };
 
+  // Check if any lines use percentage pricing mode
+  const hasPercentageLines = useMemo(() => 
+    lines.some(l => l.pricing_mode === 'percentage'), 
+    [lines]
+  );
+
+  // Construction budget and fee percentage for percentage-based calculations
+  const constructionBudget = document.construction_budget || 0;
+  const feePercentage = document.fee_percentage || 12;
+  const totalFees = useMemo(() => (constructionBudget * feePercentage) / 100, [constructionBudget, feePercentage]);
+
+  // Auto-recalculate amounts for percentage-based lines when budget/fee changes
+  useEffect(() => {
+    if (!hasPercentageLines || constructionBudget === 0) return;
+    
+    const updatedLines = lines.map(line => {
+      if (line.pricing_mode === 'percentage' && line.percentage_fee !== undefined) {
+        const newAmount = (totalFees * line.percentage_fee) / 100;
+        if (Math.abs(newAmount - (line.amount || 0)) > 0.01) {
+          return { ...line, amount: newAmount, unit_price: newAmount };
+        }
+      }
+      return line;
+    });
+    
+    const hasChanged = updatedLines.some((l, i) => l.amount !== lines[i].amount);
+    if (hasChanged) {
+      onLinesChange(updatedLines);
+    }
+  }, [totalFees, hasPercentageLines]);
+
   // Calculate totals
   const includedLines = lines.filter(l => l.is_included && l.line_type !== 'discount' && l.line_type !== 'group');
   const discountLines = lines.filter(l => l.line_type === 'discount');
   const subtotal = includedLines.reduce((sum, l) => sum + (l.amount || 0), 0);
   const totalDiscount = discountLines.reduce((sum, l) => sum + Math.abs(l.amount || 0), 0);
   const totalHT = subtotal - totalDiscount;
-  const tva = totalHT * 0.2;
+  const tva = totalHT * ((document.vat_rate || 20) / 100);
   const totalTTC = totalHT + tva;
 
   const toggleExpanded = (id: string) => {
@@ -155,13 +191,29 @@ export function QuoteLinesEditor({
     setExpandedLines(new Set([...expandedLines, newLine.id]));
   };
 
-  const addLineFromTemplate = (template: any) => {
+  const addLineFromTemplate = (template: any, usePricingMode: 'percentage' | 'fixed' = 'percentage') => {
+    const percentage = template.default_percentage || 10;
+    const amount = usePricingMode === 'percentage' && constructionBudget > 0 
+      ? (totalFees * percentage) / 100 
+      : 0;
+    
     const newLine: QuoteLine = {
-      id: generateId(), phase_code: template.code, phase_name: template.name,
-      phase_description: template.description, line_type: 'phase',
-      quantity: 1, unit: 'forfait', unit_price: 0, amount: 0,
-      percentage_fee: template.default_percentage || 10, billing_type: 'one_time',
-      is_optional: false, is_included: true, deliverables: template.deliverables || [], sort_order: lines.length
+      id: generateId(), 
+      phase_code: template.code, 
+      phase_name: template.name,
+      phase_description: template.description, 
+      line_type: 'phase',
+      pricing_mode: usePricingMode,
+      quantity: 1, 
+      unit: 'forfait', 
+      unit_price: amount, 
+      amount: amount,
+      percentage_fee: percentage, 
+      billing_type: 'one_time',
+      is_optional: false, 
+      is_included: true, 
+      deliverables: template.deliverables || [], 
+      sort_order: lines.length
     };
     onLinesChange([...lines, newLine]);
   };
@@ -459,7 +511,81 @@ export function QuoteLinesEditor({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Action bar - unified with QuoteFeesTab */}
+      {/* Budget & Fee Configuration - shown when any line uses percentage pricing */}
+      {(hasPercentageLines || lines.some(l => l.line_type === 'phase')) && (
+        <div className="flex flex-wrap items-center gap-4 p-3 bg-muted/30 rounded-lg border border-dashed">
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+              <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
+              Budget travaux
+            </Label>
+            <Input
+              type="number"
+              value={constructionBudget || ''}
+              onChange={(e) => onDocumentChange({ 
+                ...document, 
+                construction_budget: parseFloat(e.target.value) || 0 
+              })}
+              placeholder="150000"
+              className="h-8 w-32 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">€ HT</span>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+              <Percent className="h-3.5 w-3.5" strokeWidth={1.25} />
+              Taux honoraires
+            </Label>
+            <Input
+              type="number"
+              value={feePercentage || ''}
+              onChange={(e) => onDocumentChange({ 
+                ...document, 
+                fee_percentage: parseFloat(e.target.value) || 0 
+              })}
+              placeholder="12"
+              step="0.5"
+              className="h-8 w-20 text-sm"
+            />
+            <span className="text-xs text-muted-foreground">%</span>
+          </div>
+
+          {constructionBudget > 0 && (
+            <>
+              <div className="h-6 w-px bg-border" />
+              <div className="flex items-center gap-2">
+                <Calculator className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.25} />
+                <span className="text-sm font-semibold text-primary">
+                  {formatCurrency(totalFees)}
+                </span>
+                <span className="text-xs text-muted-foreground">à répartir</span>
+              </div>
+            </>
+          )}
+
+          <div className="flex-1" />
+
+          <div className="flex items-center gap-2">
+            <Checkbox
+              id="disclose-budget"
+              checked={document.construction_budget_disclosed ?? false}
+              onCheckedChange={(checked) => 
+                onDocumentChange({ 
+                  ...document, 
+                  construction_budget_disclosed: checked as boolean 
+                })
+              }
+              className="h-4 w-4"
+            />
+            <Label htmlFor="disclose-budget" className="text-xs text-muted-foreground">
+              Afficher sur doc
+            </Label>
+          </div>
+        </div>
+      )}
+
+      {/* Action bar */}
       <div className="flex items-center gap-2">
         {/* Add dropdown */}
         <DropdownMenu>
