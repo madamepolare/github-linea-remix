@@ -220,20 +220,20 @@ export default function ProjectSettings() {
   }
 
   return (
-    <PageLayout title="Paramètres projet">
-      <div className="max-w-4xl mx-auto space-y-6">
+    <PageLayout title="Paramètres" hideHeader>
+      <div className="max-w-4xl mx-auto space-y-6 pb-8">
         {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate(`/projects/${id}`)}>
+        <div className="flex items-center justify-between sticky top-0 bg-background/95 backdrop-blur-sm py-4 -mx-4 px-4 z-10">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(`/projects/${id}`)}>
               <ArrowLeft className="h-4 w-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Paramètres du projet</h1>
-              <p className="text-muted-foreground">{project.name}</p>
+              <h1 className="text-lg font-semibold">Paramètres du projet</h1>
+              <p className="text-sm text-muted-foreground">{project.name}</p>
             </div>
           </div>
-          <Button onClick={handleSave} disabled={isSaving || !name.trim() || !hasChanges}>
+          <Button size="sm" onClick={handleSave} disabled={isSaving || !name.trim() || !hasChanges}>
             {isSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Save className="h-4 w-4 mr-2" />}
             Enregistrer
           </Button>
@@ -241,24 +241,24 @@ export default function ProjectSettings() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="border-b border-border w-full justify-start rounded-none bg-transparent p-0">
-            <TabsTrigger value="general" className="gap-2">
+          <TabsList className="h-10 w-full justify-start gap-1 rounded-lg bg-muted/50 p-1">
+            <TabsTrigger value="general" className="gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Settings className="h-4 w-4" />
               Général
             </TabsTrigger>
-            <TabsTrigger value="team" className="gap-2">
+            <TabsTrigger value="team" className="gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Users className="h-4 w-4" />
               Équipe
-              <Badge variant="secondary" className="ml-1">{members?.length || 0}</Badge>
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs">{members?.length || 0}</Badge>
             </TabsTrigger>
-            <TabsTrigger value="client" className="gap-2">
+            <TabsTrigger value="client" className="gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Building2 className="h-4 w-4" />
               Client
             </TabsTrigger>
-            <TabsTrigger value="phases" className="gap-2">
+            <TabsTrigger value="phases" className="gap-2 rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Layers className="h-4 w-4" />
               Phases
-              <Badge variant="secondary" className="ml-1">{phases?.length || 0}</Badge>
+              <Badge variant="secondary" className="ml-1 h-5 min-w-5 text-xs">{phases?.length || 0}</Badge>
             </TabsTrigger>
           </TabsList>
 
