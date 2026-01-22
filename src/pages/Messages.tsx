@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTeamChannels, useTeamMessageMutations } from "@/hooks/useTeamMessages";
 import { ChannelList } from "@/components/messages/ChannelList";
@@ -15,9 +15,12 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { THIN_STROKE } from "@/components/ui/icon";
 
+type MessageFilter = "all" | "direct";
+
 export default function Messages() {
   const { channelId } = useParams<{ channelId: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
   const { data: channels, isLoading } = useTeamChannels();
   const { createChannel } = useTeamMessageMutations();
   const { user } = useAuth();
@@ -27,6 +30,21 @@ export default function Messages() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [activeChannelId, setActiveChannelId] = useState<string | null>(null);
   const [showMobileChannelList, setShowMobileChannelList] = useState(false);
+
+  // Determine filter from URL
+  const getFilterFromPath = (): MessageFilter => {
+    if (location.pathname === "/messages/direct" || location.pathname.startsWith("/messages/direct/")) {
+      return "direct";
+    }
+    return "all";
+  };
+  
+  const [filter, setFilter] = useState<MessageFilter>(getFilterFromPath());
+
+  // Update filter when route changes
+  useEffect(() => {
+    setFilter(getFilterFromPath());
+  }, [location.pathname]);
 
   // Listen for events from navigation
   useEffect(() => {
@@ -47,17 +65,32 @@ export default function Messages() {
     if (channelId) {
       setActiveChannelId(channelId);
     } else if (channels?.length && !activeChannelId) {
-      const firstChannel = channels[0];
-      setActiveChannelId(firstChannel.id);
-      navigate(`/messages/${firstChannel.id}`, { replace: true });
+      // Filter channels based on current filter
+      const filteredChannels = filter === "direct" 
+        ? channels.filter(c => c.channel_type === "direct")
+        : channels;
+      
+      if (filteredChannels.length > 0) {
+        const firstChannel = filteredChannels[0];
+        setActiveChannelId(firstChannel.id);
+        const basePath = filter === "direct" ? "/messages/direct" : "/messages";
+        navigate(`${basePath}/${firstChannel.id}`, { replace: true });
+      }
     }
-  }, [channelId, channels, activeChannelId, navigate]);
+  }, [channelId, channels, activeChannelId, navigate, filter]);
 
   const handleSelectChannel = (id: string) => {
     setActiveChannelId(id);
     setSelectedThreadId(null);
     setShowMobileChannelList(false);
-    navigate(`/messages/${id}`);
+    const basePath = filter === "direct" ? "/messages/direct" : "/messages";
+    navigate(`${basePath}/${id}`);
+  };
+
+  const handleFilterChange = (newFilter: MessageFilter) => {
+    setFilter(newFilter);
+    setActiveChannelId(null);
+    navigate(newFilter === "direct" ? "/messages/direct" : "/messages");
   };
 
   const handleOpenThread = (messageId: string) => {
@@ -66,7 +99,7 @@ export default function Messages() {
 
   const handleBackToList = () => {
     setActiveChannelId(null);
-    navigate("/messages");
+    navigate(filter === "direct" ? "/messages/direct" : "/messages");
   };
 
   // Check if the active channel is an entity conversation
@@ -95,6 +128,8 @@ export default function Messages() {
           onSelectChannel={handleSelectChannel}
           onCreateChannel={() => setShowCreateChannel(true)}
           onNewDirectMessage={() => setShowDirectMessage(true)}
+          filter={filter}
+          onFilterChange={handleFilterChange}
         />
       </div>
 
@@ -138,6 +173,8 @@ export default function Messages() {
                 onSelectChannel={handleSelectChannel}
                 onCreateChannel={() => setShowCreateChannel(true)}
                 onNewDirectMessage={() => setShowDirectMessage(true)}
+                filter={filter}
+                onFilterChange={handleFilterChange}
               />
             </motion.div>
           ) : activeChannel || isEntityConversation ? (

@@ -126,6 +126,8 @@ const App = () => (
                   <Route path="/profile" element={<Suspense fallback={<PageLoader />}><Profile /></Suspense>} />
                   <Route path="/notifications" element={<Suspense fallback={<PageLoader />}><NotificationsPage /></Suspense>} />
                   <Route path="/messages" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
+                  <Route path="/messages/direct" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
+                  <Route path="/messages/direct/:channelId" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
                   <Route path="/messages/:channelId" element={<Suspense fallback={<PageLoader />}><Messages /></Suspense>} />
                   <Route path="/crm" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
                   <Route path="/crm/:section" element={<Suspense fallback={<PageLoader />}><CRM /></Suspense>} />
