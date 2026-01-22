@@ -566,12 +566,6 @@ export function QuoteLinesEditor({
     </Draggable>
   );
 
-  // Handle toggle for percentage mode - no longer converts existing lines
-  const handlePercentageModeToggle = (enabled: boolean) => {
-    setPercentageModeEnabled(enabled);
-    // Mode mixte: on ne convertit plus automatiquement les lignes
-    // L'utilisateur peut avoir des lignes % ET des lignes forfaitaires
-  };
 
   return (
     <div className="space-y-4 sm:space-y-6">
