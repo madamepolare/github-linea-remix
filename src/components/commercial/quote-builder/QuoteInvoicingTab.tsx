@@ -271,33 +271,6 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
   
   return (
     <div className="space-y-6">
-      {/* Coverage alert */}
-      {hasCoverageGap && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
-          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Couverture de facturation incomplète</p>
-            <p className="text-sm opacity-90">
-              {formatCurrency(missingAmount)} du devis ne sont pas couverts par l'échéancier.
-              Tout ce qui est dans le devis doit être facturé.
-            </p>
-          </div>
-        </div>
-      )}
-      
-      {/* No schedule alert */}
-      {plannedInvoices.length === 0 && totalAmount > 0 && (
-        <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700">
-          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
-          <div>
-            <p className="font-medium">Aucun échéancier défini</p>
-            <p className="text-sm opacity-90">
-              Définissez un échéancier de facturation pour ce devis de {formatCurrency(totalAmount)}.
-            </p>
-          </div>
-        </div>
-      )}
-
       {/* Summary cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
@@ -361,7 +334,270 @@ export function QuoteInvoicingTab({ document, onDocumentChange, lines }: QuoteIn
         </Card>
       </div>
 
-      {/* Deposit settings - moved from sharing settings for visibility */}
+      {/* Invoice schedule - Card-based layout with generation buttons */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-base">Échéancier de facturation</CardTitle>
+              <CardDescription>
+                Définissez les acomptes et échéances de facturation du projet
+              </CardDescription>
+            </div>
+            <Button size="sm" onClick={addInvoice}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ajouter
+            </Button>
+          </div>
+          {/* Generation buttons inline */}
+          <div className="flex flex-wrap gap-2 pt-3 border-t mt-3">
+            <span className="text-xs text-muted-foreground flex items-center gap-1 mr-2">
+              <Wand2 className="h-3 w-3" />
+              Générer:
+            </span>
+            <Button variant="outline" size="sm" onClick={generateFromPhases}>
+              Phases
+            </Button>
+            <Button variant="outline" size="sm" onClick={generateFromGroups}>
+              Groupes
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => generateEqualSplit(2)}>
+              50/50
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => generateEqualSplit(3)}>
+              3 tiers
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => generateEqualSplit(4)}>
+              4 quarts
+            </Button>
+            
+            {/* Monthly schedule dialog */}
+            <Dialog open={monthlyDialogOpen} onOpenChange={setMonthlyDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  <CalendarRange className="h-4 w-4 mr-1" />
+                  Mensuel
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-[400px]">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CalendarRange className="h-5 w-5" />
+                    Échéancier mensuel
+                  </DialogTitle>
+                  <DialogDescription>
+                    Créez des échéances mensuelles en fin de mois, à partir de la date de début du projet.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label>Nombre de mois</Label>
+                    <div className="flex items-center gap-4">
+                      <Slider
+                        value={[monthCount]}
+                        onValueChange={([value]) => setMonthCount(value)}
+                        min={2}
+                        max={24}
+                        step={1}
+                        className="flex-1"
+                      />
+                      <span className="font-medium text-lg w-12 text-right">{monthCount}</span>
+                    </div>
+                  </div>
+                  <div className="p-3 rounded-lg bg-muted/50 border space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Montant par mois</span>
+                      <span className="font-medium">{formatCurrency(totalAmount / monthCount)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Total</span>
+                      <span className="font-semibold">{formatCurrency(totalAmount)}</span>
+                    </div>
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setMonthlyDialogOpen(false)}>
+                    Annuler
+                  </Button>
+                  <Button onClick={() => generateMonthlySplit(monthCount)}>
+                    <CalendarRange className="h-4 w-4 mr-2" />
+                    Générer {monthCount} échéances
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {plannedInvoices.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <Receipt className="h-12 w-12 mx-auto mb-3 opacity-50" />
+              <p>Aucune échéance définie</p>
+              <p className="text-sm">Utilisez les boutons ci-dessus pour générer automatiquement</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {plannedInvoices.map((invoice, index) => (
+                <div 
+                  key={invoice.id}
+                  className="border rounded-lg p-4 bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
+                  {/* Header row */}
+                  <div className="flex items-start gap-3 mb-3">
+                    <div className="flex items-center gap-2 shrink-0">
+                      <GripVertical className="h-4 w-4 text-muted-foreground cursor-grab" />
+                      <Badge variant="outline" className="font-mono">
+                        #{invoice.schedule_number}
+                      </Badge>
+                    </div>
+                    
+                    <div className="flex-1 min-w-0">
+                      <Input 
+                        value={invoice.title}
+                        onChange={(e) => updateInvoice(invoice.id, { title: e.target.value })}
+                        className="font-medium h-9 bg-background"
+                        placeholder="Titre de l'échéance..."
+                      />
+                    </div>
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-9 w-9 text-destructive hover:text-destructive shrink-0"
+                      onClick={() => removeInvoice(invoice.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  
+                  {/* Fields grid */}
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                    {/* Milestone */}
+                    <div className="col-span-2 md:col-span-1">
+                      <label className="text-xs text-muted-foreground mb-1 block">Jalon</label>
+                      <Input 
+                        value={invoice.milestone || ''}
+                        onChange={(e) => updateInvoice(invoice.id, { milestone: e.target.value })}
+                        placeholder="Ex: Validation APD"
+                        className="h-9 bg-background"
+                      />
+                    </div>
+                    
+                    {/* Percentage */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Pourcentage</label>
+                      <div className="relative">
+                        <Input 
+                          type="number"
+                          value={invoice.percentage || 0}
+                          onChange={(e) => updateInvoice(invoice.id, { percentage: parseFloat(e.target.value) || 0 })}
+                          className="h-9 pr-8 bg-background"
+                          min={0}
+                          max={100}
+                        />
+                        <Percent className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    
+                    {/* Amount HT */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Montant HT</label>
+                      <div className="relative">
+                        <Input 
+                          type="number"
+                          value={Math.round(invoice.amount_ht) || 0}
+                          onChange={(e) => updateInvoice(invoice.id, { amount_ht: parseFloat(e.target.value) || 0 })}
+                          className="h-9 pr-8 bg-background"
+                        />
+                        <Euro className="absolute right-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                    
+                    {/* Planned date */}
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1 block">Date planifiée</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button 
+                            variant="outline" 
+                            className={cn(
+                              "w-full h-9 justify-start font-normal bg-background",
+                              !invoice.planned_date && "text-muted-foreground"
+                            )}
+                          >
+                            <CalendarIcon className="h-4 w-4 mr-2 shrink-0" />
+                            <span className="truncate">
+                              {invoice.planned_date 
+                                ? format(new Date(invoice.planned_date), 'dd MMM yyyy', { locale: fr })
+                                : 'Choisir...'}
+                            </span>
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={invoice.planned_date ? new Date(invoice.planned_date) : undefined}
+                            onSelect={(date) => date && updateInvoice(invoice.id, { planned_date: format(date, 'yyyy-MM-dd') })}
+                            locale={fr}
+                          />
+                        </PopoverContent>
+                      </Popover>
+                    </div>
+                  </div>
+                </div>
+              ))}
+              
+              {/* Summary bar */}
+              <div className="flex flex-wrap items-center gap-3 pt-3 border-t mt-4">
+                <div className={cn(
+                  "flex items-center gap-2 px-3 py-1.5 rounded-lg",
+                  isBalanced ? "bg-green-500/10 text-green-600" : "bg-amber-500/10 text-amber-600"
+                )}>
+                  <span className="font-medium">Total:</span>
+                  <span className="font-bold">{totalPercentage.toFixed(1)}%</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted">
+                  <span className="text-muted-foreground">HT:</span>
+                  <span className="font-medium">{formatCurrency(totalHT)}</span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-primary/10">
+                  <span className="text-muted-foreground">TTC:</span>
+                  <span className="font-bold text-lg">{formatCurrency(totalTTC)}</span>
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Coverage alert */}
+      {hasCoverageGap && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-destructive/10 border border-destructive/30 rounded-lg text-destructive">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Couverture de facturation incomplète</p>
+            <p className="text-sm opacity-90">
+              {formatCurrency(missingAmount)} du devis ne sont pas couverts par l'échéancier.
+              Tout ce qui est dans le devis doit être facturé.
+            </p>
+          </div>
+        </div>
+      )}
+      
+      {/* No schedule alert */}
+      {plannedInvoices.length === 0 && totalAmount > 0 && (
+        <div className="flex items-start gap-3 px-4 py-3 bg-amber-500/10 border border-amber-500/30 rounded-lg text-amber-700 dark:text-amber-400">
+          <AlertCircle className="h-5 w-5 shrink-0 mt-0.5" />
+          <div>
+            <p className="font-medium">Aucun échéancier défini</p>
+            <p className="text-sm opacity-90">
+              Définissez un échéancier de facturation pour ce devis de {formatCurrency(totalAmount)}.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Deposit settings */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
