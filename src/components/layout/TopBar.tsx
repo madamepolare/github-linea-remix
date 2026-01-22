@@ -196,70 +196,77 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
   const hasTabs = config.tabs && config.tabs.length > 0;
 
   return (
-    <div className="sticky top-0 z-30 bg-background border-b border-border">
-      {/* Entity Header Row */}
-      <div className="flex items-center justify-between h-14 px-6">
-        {/* Left: Back + Entity info */}
-        <div className="flex items-center gap-3 min-w-0">
-          {/* Back button */}
+    <div className="sticky top-0 z-30 bg-background">
+      {/* Main Header Row - Compact & Clean */}
+      <div className="flex items-center h-12 px-4 gap-3 border-b border-border">
+        {/* Left: Back button + Color accent + Title */}
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          {/* Back button - Minimal */}
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(config.backTo)}
-            className="h-8 w-8 rounded-full hover:bg-muted shrink-0"
+            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={THIN_STROKE} />
           </Button>
 
-          {/* Color accent line */}
+          {/* Color accent bar */}
           {config.color && (
             <div
-              className="w-1 h-8 rounded-full shrink-0"
+              className="w-0.5 h-5 rounded-full shrink-0"
               style={{ backgroundColor: config.color }}
             />
           )}
 
-          {/* Entity title + badges */}
-          <div className="flex flex-col gap-0.5 min-w-0 max-w-[50vw]">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <h1 className="text-base font-semibold tracking-tight truncate max-w-[40vw]" title={config.title}>
-                {config.title}
-              </h1>
-              <div className="flex items-center gap-1.5 shrink-0">
-                {config.badges?.map((badge, idx) => (
-                  <Badge
-                    key={idx}
-                    variant={badge.variant || "outline"}
-                    className="text-xs font-normal text-muted-foreground border-border whitespace-nowrap"
-                  >
-                    {badge.icon && <badge.icon className="h-3 w-3 mr-1" strokeWidth={THIN_STROKE} />}
-                    {badge.label}
-                  </Badge>
-                ))}
-              </div>
-            </div>
-            {/* Metadata row */}
-            {config.metadata && config.metadata.length > 0 && (
-              <div className="flex items-center gap-2.5 text-xs text-muted-foreground">
-                {config.metadata.map((meta, idx) => (
-                  <span key={idx} className="flex items-center gap-1">
+          {/* Title + Badge inline */}
+          <div className="flex items-center gap-2 min-w-0">
+            <h1 className="text-sm font-semibold tracking-tight truncate" title={config.title}>
+              {config.title}
+            </h1>
+            {config.badges && config.badges.length > 0 && (() => {
+              const BadgeIcon = config.badges[0].icon;
+              return (
+                <Badge
+                  variant={config.badges[0].variant || "outline"}
+                  className="text-[10px] font-medium h-5 px-1.5 shrink-0"
+                  style={config.color ? {
+                    backgroundColor: `${config.color}15`,
+                    borderColor: `${config.color}30`,
+                    color: config.color
+                  } : undefined}
+                >
+                  {BadgeIcon && <BadgeIcon className="h-2.5 w-2.5 mr-1" strokeWidth={THIN_STROKE} />}
+                  {config.badges[0].label}
+                </Badge>
+              );
+            })()}
+          </div>
+
+          {/* Metadata - Subtle separator, inline */}
+          {config.metadata && config.metadata.length > 0 && (
+            <>
+              <span className="text-border">•</span>
+              <div className="flex items-center gap-3 text-xs text-muted-foreground truncate">
+                {config.metadata.slice(0, 3).map((meta, idx) => (
+                  <span key={idx} className="flex items-center gap-1 shrink-0">
                     {meta.icon && <meta.icon className="h-3 w-3" strokeWidth={THIN_STROKE} />}
-                    {meta.label}
+                    <span className="truncate max-w-[120px]">{meta.label}</span>
                   </span>
                 ))}
               </div>
-            )}
-          </div>
+            </>
+          )}
         </div>
 
-        {/* Right: Actions */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right: Actions - Compact */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {config.actions}
           {config.onSettings && (
             <Button 
               variant="ghost" 
               size="icon" 
-              className="h-8 w-8 rounded-full"
+              className="h-8 w-8"
               onClick={config.onSettings}
             >
               <MoreHorizontal className="h-4 w-4" strokeWidth={THIN_STROKE} />
@@ -268,10 +275,10 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
         </div>
       </div>
 
-      {/* Entity Tabs Row */}
+      {/* Tabs Row - Clean horizontal scroll */}
       {hasTabs && (
-        <div className="flex items-center h-10 px-6 border-t border-border/30">
-          <nav className="flex items-center gap-1">
+        <div className="flex items-center h-10 px-4 border-b border-border bg-muted/30 overflow-x-auto scrollbar-hide">
+          <nav className="flex items-center gap-0.5">
             {config.tabs!.map((tab) => {
               const isActive = config.activeTab === tab.key;
               
@@ -280,10 +287,10 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
                   key={tab.key}
                   onClick={() => config.onTabChange?.(tab.key)}
                   className={cn(
-                    "relative flex items-center gap-1.5 px-3 py-1.5 text-sm rounded-md transition-all duration-150",
+                    "relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors whitespace-nowrap",
                     isActive
-                      ? "text-foreground font-medium"
-                      : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
+                      ? "text-foreground bg-background shadow-sm border border-border"
+                      : "text-muted-foreground hover:text-foreground hover:bg-background/50"
                   )}
                 >
                   {tab.icon && <tab.icon className="h-3.5 w-3.5" strokeWidth={THIN_STROKE} />}
@@ -292,21 +299,14 @@ function EntityTopBar({ config, module }: EntityTopBarProps) {
                     <Badge 
                       variant="secondary" 
                       className={cn(
-                        "h-4 min-w-4 px-1 text-[10px] font-medium ml-1",
+                        "h-4 min-w-4 px-1 text-[10px] font-medium",
                         isActive 
-                          ? "bg-foreground text-background" 
-                          : "bg-muted-foreground/20 text-muted-foreground"
+                          ? "bg-primary text-primary-foreground" 
+                          : "bg-muted text-muted-foreground"
                       )}
                     >
                       {tab.badge > 99 ? "99+" : tab.badge}
                     </Badge>
-                  )}
-                  {isActive && (
-                    <motion.div
-                      layoutId="entity-tab-active"
-                      className="absolute inset-0 bg-muted rounded-md -z-10"
-                      transition={{ type: "spring", bounce: 0.15, duration: 0.4 }}
-                    />
                   )}
                 </button>
               );
