@@ -51,6 +51,16 @@ const Commercial = () => {
   useEffect(() => {
     setViewMode(getViewModeFromPath());
   }, [location.pathname]);
+
+  // Listen for TopBar quick action event
+  useEffect(() => {
+    const handleNavigateToQuoteBuilder = () => {
+      navigate('/commercial/quote/new');
+    };
+    
+    window.addEventListener('navigate-to-quote-builder', handleNavigateToQuoteBuilder);
+    return () => window.removeEventListener('navigate-to-quote-builder', handleNavigateToQuoteBuilder);
+  }, [navigate]);
   
   const handleViewModeChange = (mode: 'list' | 'pipeline' | 'monthly') => {
     setViewMode(mode);
