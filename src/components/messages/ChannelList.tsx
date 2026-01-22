@@ -15,12 +15,16 @@ import { format } from "date-fns";
 import { fr } from "date-fns/locale";
 import { THIN_STROKE } from "@/components/ui/icon";
 
+export type MessageFilter = "all" | "direct";
+
 interface ChannelListProps {
   channels: TeamChannel[];
   activeChannelId: string | null;
   onSelectChannel: (id: string) => void;
   onCreateChannel: () => void;
   onNewDirectMessage: () => void;
+  filter?: MessageFilter;
+  onFilterChange?: (filter: MessageFilter) => void;
 }
 
 export function ChannelList({
@@ -29,6 +33,8 @@ export function ChannelList({
   onSelectChannel,
   onCreateChannel,
   onNewDirectMessage,
+  filter = "all",
+  onFilterChange,
 }: ChannelListProps) {
   const { data: unreadCounts } = useUnreadCounts();
   const { data: entityConversations } = useEntityConversations();
@@ -185,25 +191,60 @@ export function ChannelList({
     );
   };
 
+  // Apply filter
+  const showPublicChannels = filter === "all";
+  const showPrivateChannels = filter === "all";
+  const showEntityConversations = filter === "all";
+
   return (
     <div className="flex flex-col h-full">
+      {/* Filter Tabs */}
+      {onFilterChange && (
+        <div className="px-3 pt-3 pb-2 border-b border-border/40">
+          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
+            <button
+              onClick={() => onFilterChange("all")}
+              className={cn(
+                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                filter === "all"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => onFilterChange("direct")}
+              className={cn(
+                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
+                filter === "direct"
+                  ? "bg-background text-foreground shadow-sm"
+                  : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              Messages directs
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Search - Desktop only, mobile has it in header */}
       <div className="p-3 hidden md:block">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" strokeWidth={1.25} />
           <Input
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Rechercher..."
-            className="pl-9 h-9 bg-muted/50 border-0"
+            className="pl-9 h-9 bg-muted/30 border-0"
           />
         </div>
       </div>
 
       <ScrollArea className="flex-1">
         <div className="p-2 space-y-4">
-          {/* Public Channels */}
-          {filteredPublic.length > 0 && (
+          {/* Public Channels - only show if filter is "all" */}
+          {showPublicChannels && filteredPublic.length > 0 && (
             <div>
               <div className="flex items-center justify-between px-3 mb-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -216,8 +257,8 @@ export function ChannelList({
             </div>
           )}
 
-          {/* Private Channels */}
-          {filteredPrivate.length > 0 && (
+          {/* Private Channels - only show if filter is "all" */}
+          {showPrivateChannels && filteredPrivate.length > 0 && (
             <div>
               <div className="flex items-center justify-between px-3 mb-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -230,7 +271,7 @@ export function ChannelList({
             </div>
           )}
 
-          {/* Direct Messages */}
+          {/* Direct Messages - always show */}
           <div>
             <div className="flex items-center justify-between px-3 mb-2">
               <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -242,7 +283,7 @@ export function ChannelList({
                 onClick={onNewDirectMessage}
                 className="h-6 w-6"
               >
-                <Plus className="h-3.5 w-3.5" />
+                <Plus className="h-3.5 w-3.5" strokeWidth={1.25} />
               </Button>
             </div>
             <div className="space-y-0.5">
@@ -256,8 +297,8 @@ export function ChannelList({
             </div>
           </div>
 
-          {/* Entity Conversations by Type */}
-          {Object.keys(groupedEntityConversations).length > 0 && (
+          {/* Entity Conversations by Type - only show if filter is "all" */}
+          {showEntityConversations && Object.keys(groupedEntityConversations).length > 0 && (
             <div className="space-y-2">
               <div className="px-3">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -272,8 +313,8 @@ export function ChannelList({
                   <Collapsible key={type} open={isExpanded} onOpenChange={() => toggleEntityType(type)}>
                     <CollapsibleTrigger asChild>
                       <button className="w-full flex items-center gap-2 px-3 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-muted/50">
-                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-                        <Icon className="h-3.5 w-3.5" />
+                        {isExpanded ? <ChevronDown className="h-3.5 w-3.5" strokeWidth={1.25} /> : <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.25} />}
+                        <Icon className="h-3.5 w-3.5" strokeWidth={1.25} />
                         <span>{entityLabels[type]}</span>
                         <Badge variant="outline" className="h-5 min-w-5 px-1.5 text-[10px] ml-auto">
                           {conversations.length}
