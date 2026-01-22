@@ -450,9 +450,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
         {!collapsed ? (
           <button 
             onClick={() => setShowSupportChat(true)}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-sm text-foreground/80 font-medium transition-colors hover:bg-muted/50 hover:text-foreground"
+            className="flex w-full items-center gap-2 px-1 py-1 text-sm text-foreground font-normal transition-colors hover:text-foreground"
           >
-            <HelpCircle className="h-[18px] w-[18px] text-foreground/60" strokeWidth={1.75} />
+            <div className="flex items-center justify-center h-7 w-7 rounded-md text-foreground hover:bg-foreground/5">
+              <HelpCircle className="h-4 w-4" strokeWidth={1.25} />
+            </div>
             <span>Aide & Support</span>
           </button>
         ) : (
@@ -460,9 +462,11 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
             <TooltipTrigger asChild>
               <button 
                 onClick={() => setShowSupportChat(true)}
-                className="flex w-full items-center justify-center rounded-lg px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground"
+                className="flex w-full items-center justify-center px-1 py-1 text-foreground transition-colors"
               >
-                <HelpCircle className="h-[18px] w-[18px] text-muted-foreground/70" strokeWidth={THIN_STROKE} />
+                <div className="flex items-center justify-center h-9 w-9 rounded-md text-foreground hover:bg-foreground/5">
+                  <HelpCircle className="h-[18px] w-[18px]" strokeWidth={1.25} />
+                </div>
               </button>
             </TooltipTrigger>
             <TooltipContent side="right">Aide & Support</TooltipContent>
