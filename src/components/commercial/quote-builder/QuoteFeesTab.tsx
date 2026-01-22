@@ -62,6 +62,7 @@ import { getDisciplineBySlug, DisciplinePhase, DISCIPLINE_CONFIGS } from '@/lib/
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { QuickQuoteLineRow } from './QuickQuoteLineRow';
 
 interface QuoteFeesTabProps {
   document: Partial<QuoteDocument>;
@@ -824,6 +825,12 @@ export function QuoteFeesTab({
           )}
         </Droppable>
       </DragDropContext>
+
+      {/* Quick add row */}
+      <QuickQuoteLineRow
+        onAdd={(name) => addPhase({ code: `P${phases.length + 1}`, name, percentage: 0 })}
+        placeholder="Ajouter une phase..."
+      />
 
       {/* Summary footer with auto-adjust */}
       <div className="space-y-3 pt-2">

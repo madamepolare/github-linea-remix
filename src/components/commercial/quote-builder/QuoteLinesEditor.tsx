@@ -60,6 +60,7 @@ import { QuoteMarginSummary } from './QuoteMarginSummary';
 import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useLineFeatures } from '@/contexts/LineFeatureContext';
 import { cn } from '@/lib/utils';
+import { QuickQuoteLineRow } from './QuickQuoteLineRow';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -802,6 +803,27 @@ export function QuoteLinesEditor({
           </div>
         </DragDropContext>
       )}
+
+      {/* Quick add row */}
+      <QuickQuoteLineRow
+        onAdd={(name) => {
+          const newLine: QuoteLine = {
+            id: generateId(),
+            phase_name: name,
+            line_type: 'service',
+            quantity: 1,
+            unit: 'forfait',
+            unit_price: 0,
+            amount: 0,
+            billing_type: 'one_time',
+            is_optional: false,
+            is_included: true,
+            sort_order: lines.length
+          };
+          onLinesChange([...lines, newLine]);
+        }}
+        placeholder="Ajouter une prestation..."
+      />
 
       {lines.length > 0 && (
         <div className="space-y-3 pt-4">
