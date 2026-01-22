@@ -35,9 +35,10 @@ interface QuoteGeneralTabProps {
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
   linkedProjectId?: string;
   onLinkedProjectChange?: (projectId: string | undefined) => void;
+  isLocked?: boolean;
 }
 
-export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, onLinkedProjectChange }: QuoteGeneralTabProps) {
+export function QuoteGeneralTab({ document, onDocumentChange, linkedProjectId, onLinkedProjectChange, isLocked = false }: QuoteGeneralTabProps) {
   const { activeContractTypes, isLoading: isLoadingTypes } = useContractTypes();
   const { projects, isLoading: isLoadingProjects } = useProjects();
   const { data: members } = useTeamMembers();

@@ -30,7 +30,9 @@ import {
   LucideIcon,
   Trophy,
   Rocket,
-  ExternalLink
+  ExternalLink,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import {
   Tooltip,
@@ -194,6 +196,8 @@ export default function QuoteBuilder() {
   const [showCreateProjectDialog, setShowCreateProjectDialog] = useState(false);
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
+  const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [isManuallyUnlocked, setIsManuallyUnlocked] = useState(false);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
   const [document, setDocument] = useState<Partial<QuoteDocument>>({
@@ -206,6 +210,10 @@ export default function QuoteBuilder() {
     total_amount: 0,
     project_type: 'architecture'
   });
+  
+  // Determine if document is locked (won quotes: accepted or signed)
+  const isWonQuote = document.status === 'accepted' || document.status === 'signed';
+  const isLocked = isWonQuote && !isManuallyUnlocked;
   
   const [lines, setLines] = useState<QuoteLine[]>([]);
   
@@ -644,6 +652,27 @@ export default function QuoteBuilder() {
     <LineFeatureProvider contractType={currentContractType}>
     <div className="h-full flex flex-col bg-background">
       
+      {/* Locked banner for won quotes */}
+      {isLocked && (
+        <div className="flex items-center justify-between px-4 py-2 bg-amber-50 border-b border-amber-200 text-amber-800">
+          <div className="flex items-center gap-2">
+            <Lock className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              Ce devis est verrouillé car il a été {document.status === 'signed' ? 'signé' : 'accepté'}.
+            </span>
+          </div>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="h-7 text-xs border-amber-300 hover:bg-amber-100"
+            onClick={() => setShowUnlockDialog(true)}
+          >
+            <Unlock className="h-3 w-3 mr-1" />
+            Déverrouiller
+          </Button>
+        </div>
+      )}
+      
       {/* Header */}
       <div className="flex items-center justify-between h-12 px-4 sm:px-6 border-b bg-card shrink-0">
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -667,8 +696,10 @@ export default function QuoteBuilder() {
                 placeholder={isNew ? 'Titre du projet... *' : 'Édition du devis *'}
                 className={cn(
                   "font-medium text-sm bg-transparent border-0 focus:ring-0 focus:outline-none w-full min-w-0 placeholder:text-muted-foreground truncate",
-                  !document.title?.trim() && "placeholder:text-destructive/60"
+                  !document.title?.trim() && "placeholder:text-destructive/60",
+                  isLocked && "cursor-not-allowed opacity-60"
                 )}
+                disabled={isLocked}
                 required
               />
             </div>
@@ -684,8 +715,12 @@ export default function QuoteBuilder() {
           <Select
             value={document.status || 'draft'}
             onValueChange={(v) => handleDocumentChange({ status: v as DocumentStatus })}
+            disabled={isLocked}
           >
-            <SelectTrigger className="h-8 w-auto min-w-[110px] text-xs font-medium rounded-full border-0 bg-muted/50">
+            <SelectTrigger className={cn(
+              "h-8 w-auto min-w-[110px] text-xs font-medium rounded-full border-0 bg-muted/50",
+              isLocked && "opacity-60"
+            )}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -927,6 +962,7 @@ export default function QuoteBuilder() {
                     onDocumentChange={handleDocumentChange}
                     linkedProjectId={linkedProjectId}
                     onLinkedProjectChange={setLinkedProjectId}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -941,6 +977,7 @@ export default function QuoteBuilder() {
                     // Always show the hybrid UI when the tab exists so users can access
                     // both % phases (honoraires) and direct pricing (prestations).
                     showFeesSubTab={true}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -953,6 +990,7 @@ export default function QuoteBuilder() {
                     lines={lines}
                     onLinesChange={handleLinesChange}
                     showFeesSubTab={true}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -964,6 +1002,7 @@ export default function QuoteBuilder() {
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
                     onLinesChange={handleLinesChange}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -975,6 +1014,7 @@ export default function QuoteBuilder() {
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
                     onLinesChange={handleLinesChange}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -985,6 +1025,7 @@ export default function QuoteBuilder() {
                     document={document}
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -995,6 +1036,7 @@ export default function QuoteBuilder() {
                     document={document}
                     onDocumentChange={handleDocumentChange}
                     contractTypeConfig={currentContractType}
+                    isLocked={isLocked}
                   />
                 </TabsContent>
               )}
@@ -1103,6 +1145,36 @@ export default function QuoteBuilder() {
             <AlertDialogCancel>Annuler</AlertDialogCancel>
             <AlertDialogAction onClick={handleConfirmBack} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
               Quitter sans sauvegarder
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      
+      {/* Unlock confirmation dialog */}
+      <AlertDialog open={showUnlockDialog} onOpenChange={setShowUnlockDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Unlock className="h-5 w-5 text-amber-600" />
+              Déverrouiller ce devis ?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Ce devis a été {document.status === 'signed' ? 'signé' : 'accepté'} par le client. 
+              Le déverrouiller vous permettra de le modifier, mais les changements pourraient 
+              créer des incohérences avec les documents déjà signés ou les projets créés.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Annuler</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                setIsManuallyUnlocked(true);
+                setShowUnlockDialog(false);
+              }}
+              className="bg-amber-600 text-white hover:bg-amber-700"
+            >
+              <Unlock className="h-4 w-4 mr-2" />
+              Déverrouiller
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -35,6 +35,7 @@ interface QuoteProductionTabProps {
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
   lines: QuoteLine[];
   onLinesChange: (lines: QuoteLine[]) => void;
+  isLocked?: boolean;
 }
 
 const PRODUCTION_LINE_TYPES = [
@@ -49,7 +50,8 @@ export function QuoteProductionTab({
   document, 
   onDocumentChange, 
   lines, 
-  onLinesChange 
+  onLinesChange,
+  isLocked = false 
 }: QuoteProductionTabProps) {
   const [defaultMargin, setDefaultMargin] = useState(20);
 

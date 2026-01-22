@@ -35,12 +35,14 @@ interface QuoteConditionsTabProps {
   document: Partial<QuoteDocument>;
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
   contractTypeConfig?: ContractType;
+  isLocked?: boolean;
 }
 
 export function QuoteConditionsTab({ 
   document, 
   onDocumentChange,
-  contractTypeConfig 
+  contractTypeConfig,
+  isLocked = false 
 }: QuoteConditionsTabProps) {
   const [isGenerating, setIsGenerating] = useState(false);
   

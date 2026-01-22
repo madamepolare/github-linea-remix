@@ -9,6 +9,7 @@ interface QuoteFeesAndLinesTabProps {
   lines: QuoteLine[];
   onLinesChange: (lines: QuoteLine[]) => void;
   showFeesSubTab?: boolean; // Deprecated - kept for backward compatibility
+  isLocked?: boolean;
 }
 
 export function QuoteFeesAndLinesTab({
@@ -16,6 +17,7 @@ export function QuoteFeesAndLinesTab({
   onDocumentChange,
   lines,
   onLinesChange,
+  isLocked = false,
 }: QuoteFeesAndLinesTabProps) {
   return (
     <QuoteLinesEditor
@@ -23,6 +25,7 @@ export function QuoteFeesAndLinesTab({
       onLinesChange={onLinesChange}
       document={document}
       onDocumentChange={onDocumentChange}
+      isLocked={isLocked}
     />
   );
 }

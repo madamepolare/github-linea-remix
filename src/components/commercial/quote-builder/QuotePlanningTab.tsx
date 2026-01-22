@@ -27,13 +27,15 @@ interface QuotePlanningTabProps {
   onDocumentChange: (doc: Partial<QuoteDocument>) => void;
   lines: QuoteLine[];
   onLinesChange: (lines: QuoteLine[]) => void;
+  isLocked?: boolean;
 }
 
 export function QuotePlanningTab({ 
   document, 
   onDocumentChange, 
   lines, 
-  onLinesChange 
+  onLinesChange,
+  isLocked = false 
 }: QuotePlanningTabProps) {
   const [startDate, setStartDate] = useState<Date | undefined>(() => {
     // Try to get from first phase line
