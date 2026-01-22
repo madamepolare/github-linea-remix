@@ -282,7 +282,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
   return (
     <motion.aside
       initial={false}
-      animate={{ width: collapsed ? 56 : 220 }}
+      animate={{ width: collapsed ? 48 : 220 }}
       transition={{ duration: 0.2, ease: [0.4, 0, 0.2, 1] }}
       className={cn(
         "fixed left-0 top-0 z-40 flex h-screen flex-col",
@@ -481,7 +481,7 @@ export function AppSidebar({ onNavigate }: AppSidebarProps) {
       </div>
 
       {/* User Profile */}
-      <div className="relative border-t border-border/40 p-2.5">
+      <div className={cn("relative border-t border-border/40", collapsed ? "p-1" : "p-2.5")}>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button
