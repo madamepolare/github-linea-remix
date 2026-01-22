@@ -63,10 +63,7 @@ export const MODULE_CONFIG: Record<string, ModuleNavConfig> = {
     title: "Messages",
     icon: MessageSquare,
     href: "/messages",
-    subNav: [
-      { key: "all", label: "Tous", href: "/messages" },
-      { key: "direct", label: "Messages directs", href: "/messages/direct" },
-    ],
+    subNav: [], // Filters are handled in GlobalTopBar
     quickActions: [
       { key: "new-channel", label: "Nouveau canal", event: "open-create-channel" },
       { key: "new-dm", label: "Nouveau message", event: "open-new-dm" },
