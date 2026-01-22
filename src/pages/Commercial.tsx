@@ -114,50 +114,9 @@ const Commercial = () => {
 
   return (
     <PageLayout
-      title={activeWorkspace ? `Business · ${activeWorkspace.name}` : 'Business'}
-      description="Gérez vos devis et contrats commerciaux"
-      actions={
-        <div className="flex items-center gap-2">
-          <div className="flex items-center border rounded-lg p-1">
-            <Button
-              variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('list')}
-            >
-              <LayoutList className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'pipeline' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('pipeline')}
-            >
-              <Kanban className="h-4 w-4" />
-            </Button>
-            <Button
-              variant={viewMode === 'monthly' ? 'secondary' : 'ghost'}
-              size="sm"
-              onClick={() => handleViewModeChange('monthly')}
-            >
-              <Calendar className="h-4 w-4" />
-            </Button>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
-                Nouveau document
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleNewDocument('quote')}>
-                <FileText className="h-4 w-4 mr-2" />
-                Nouveau devis
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      }
->
+      title="Business"
+      hideHeader
+    >
 
       {/* Tabs for Active vs Won */}
       {viewMode !== 'monthly' && (
