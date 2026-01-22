@@ -198,38 +198,8 @@ export function ChannelList({
 
   return (
     <div className="flex flex-col h-full">
-      {/* Filter Tabs */}
-      {onFilterChange && (
-        <div className="px-3 pt-3 pb-2 border-b border-border/40">
-          <div className="flex gap-1 p-1 bg-muted/50 rounded-lg">
-            <button
-              onClick={() => onFilterChange("all")}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
-                filter === "all"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Tous
-            </button>
-            <button
-              onClick={() => onFilterChange("direct")}
-              className={cn(
-                "flex-1 px-3 py-1.5 text-sm font-medium rounded-md transition-colors",
-                filter === "direct"
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              )}
-            >
-              Messages directs
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Search - Desktop only, mobile has it in header */}
-      <div className="p-3 hidden md:block">
+      {/* Search */}
+      <div className="p-3">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" strokeWidth={1.25} />
           <Input

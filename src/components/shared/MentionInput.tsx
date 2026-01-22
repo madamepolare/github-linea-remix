@@ -549,14 +549,14 @@ export function MentionInput({
           style={{ minHeight }}
           autoFocus={autoFocus}
         />
-        <div className="absolute right-2 bottom-2 pointer-events-none">
-          <span className="text-[10px] text-muted-foreground/50 flex items-center gap-2">
+        <div className="absolute right-2 bottom-1.5 pointer-events-none hidden md:block">
+          <span className="text-[10px] text-muted-foreground/40 flex items-center gap-2">
             <span className="flex items-center gap-0.5">
-              <AtSign className="h-3 w-3" />
+              <AtSign className="h-2.5 w-2.5" />
               mentionner
             </span>
             <span className="flex items-center gap-0.5">
-              <Slash className="h-3 w-3" />
+              <Slash className="h-2.5 w-2.5" />
               lier
             </span>
           </span>

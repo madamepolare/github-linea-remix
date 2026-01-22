@@ -100,12 +100,12 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
   const Icon = isDM ? MessageCircle : (channel.channel_type === "private" ? Lock : Hash);
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative">
       {/* Channel Header - Mobile optimized */}
       <motion.header 
         initial={{ y: -10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
-        className="flex items-center gap-2 px-2 md:px-4 py-2 md:py-3 border-b bg-background/95 backdrop-blur-xl sticky top-0 z-10 safe-area-inset-top"
+        className="flex items-center gap-2 px-2 md:px-4 py-2 md:py-3 border-b bg-background/95 backdrop-blur-xl sticky top-0 z-10 safe-area-inset-top shrink-0"
       >
         {/* Back button - Mobile only */}
         {onBack && (
@@ -159,8 +159,8 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
         </div>
       </motion.header>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1" ref={scrollRef}>
+      {/* Messages - Scrollable area */}
+      <ScrollArea className="flex-1 min-h-0" ref={scrollRef}>
         <div className="px-3 md:px-4 py-4 space-y-0.5">
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
@@ -221,7 +221,7 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
       </AnimatePresence>
 
       {/* Message Input - Fixed at bottom */}
-      <div className="sticky bottom-0 left-0 right-0 p-2 md:p-4 border-t bg-background/95 backdrop-blur-xl safe-area-inset-bottom z-20">
+      <div className="shrink-0 p-3 md:p-4 border-t bg-background safe-area-inset-bottom">
         <MessageInput
           channelName={displayName}
           onSend={handleSendMessage}

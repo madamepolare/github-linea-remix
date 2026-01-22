@@ -105,9 +105,9 @@ export function EntityConversationView({ entityKey, onClose, onBack }: EntityCon
   }
 
   return (
-    <div className="flex flex-col h-full bg-background">
+    <div className="flex flex-col h-full bg-background relative">
       {/* Header */}
-      <div className="px-2 md:px-4 py-2 md:py-3 border-b flex items-center gap-2 bg-background/95 backdrop-blur-xl sticky top-0 z-10">
+      <div className="px-2 md:px-4 py-2 md:py-3 border-b flex items-center gap-2 bg-background/95 backdrop-blur-xl sticky top-0 z-10 shrink-0">
         {/* Back button - Mobile only */}
         {onBack && (
           <Button
@@ -143,8 +143,8 @@ export function EntityConversationView({ entityKey, onClose, onBack }: EntityCon
         </div>
       </div>
 
-      {/* Messages */}
-      <ScrollArea className="flex-1">
+      {/* Messages - Scrollable area */}
+      <ScrollArea className="flex-1 min-h-0">
         <div className="p-4 space-y-4">
           {communications && communications.length > 0 ? (
             communications.map((comm) => {
@@ -201,8 +201,8 @@ export function EntityConversationView({ entityKey, onClose, onBack }: EntityCon
         </div>
       </ScrollArea>
 
-      {/* Input */}
-      <div className="p-4 border-t">
+      {/* Input - Fixed at bottom */}
+      <div className="shrink-0 p-3 md:p-4 border-t bg-background safe-area-inset-bottom">
         <MessageInput
           channelName={getEntityTypeLabel(entityType)}
           onSend={handleSend}
