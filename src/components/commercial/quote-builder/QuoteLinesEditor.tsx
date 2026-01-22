@@ -66,6 +66,7 @@ import { useTeamMembers } from '@/hooks/useTeamMembers';
 import { useLineFeatures } from '@/contexts/LineFeatureContext';
 import { cn } from '@/lib/utils';
 import { QuickQuoteLineRow } from './QuickQuoteLineRow';
+import { DeleteDialog } from '@/components/ui/patterns/confirm-dialog';
 
 interface QuoteLinesEditorProps {
   lines: QuoteLine[];
@@ -87,6 +88,7 @@ export function QuoteLinesEditor({
   const [expandedLines, setExpandedLines] = useState<Set<string>>(new Set());
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [clearAllDialogOpen, setClearAllDialogOpen] = useState(false);
   
   // Global toggle for percentage pricing mode
   const [percentageModeEnabled, setPercentageModeEnabled] = useState(() => {
@@ -694,6 +696,32 @@ export function QuoteLinesEditor({
               Ajouter
             </Button>
           </DropdownMenuTrigger>
+        
+        {/* Clear all button - only show when there are lines */}
+        {lines.length > 0 && (
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="h-8 text-xs text-destructive hover:text-destructive hover:bg-destructive/10"
+            onClick={() => setClearAllDialogOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" strokeWidth={1.25} />
+            Tout effacer
+          </Button>
+        )}
+        
+        {/* Clear all confirmation dialog */}
+        <DeleteDialog
+          open={clearAllDialogOpen}
+          onOpenChange={setClearAllDialogOpen}
+          title="Effacer toutes les lignes"
+          description={`Êtes-vous sûr de vouloir supprimer les ${lines.length} ligne(s) du devis ? Cette action est irréversible.`}
+          confirmLabel="Tout effacer"
+          onConfirm={() => {
+            onLinesChange([]);
+            setClearAllDialogOpen(false);
+          }}
+        />
           <DropdownMenuContent align="start" className="w-56">
             <DropdownMenuItem onClick={addGroup}>
               <FolderPlus className="h-4 w-4 mr-2" strokeWidth={1.25} />
