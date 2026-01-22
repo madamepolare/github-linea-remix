@@ -1151,8 +1151,6 @@ export function QuoteLinesEditor({
 
       {lines.length > 0 && (
         <div className="space-y-3 pt-4">
-          {/* Résumé des marges - conditionnel */}
-          {features.showMarginSummary && <QuoteMarginSummary lines={lines} />}
           
           {/* Totals - plain text without Card */}
           <div className="space-y-1.5 px-1">
@@ -1238,6 +1236,9 @@ export function QuoteLinesEditor({
               </DropdownMenu>
             </div>
           </div>
+
+          {/* Résumé des marges - conditionnel (après les totaux) */}
+          {features.showMarginSummary && <QuoteMarginSummary lines={lines} />}
         </div>
       )}
     </div>
