@@ -635,52 +635,108 @@ export function QuoteLinesEditor({
         {/* Budget & Fee Configuration - shown only when percentage mode is enabled */}
         {percentageModeEnabled && (
           <div className="flex flex-wrap items-center gap-4 pt-3 border-t">
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-                <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
-                Budget travaux
-              </Label>
-              <Input
-                type="number"
-                value={constructionBudget || ''}
-                onChange={(e) => onDocumentChange({ 
-                  ...document, 
-                  construction_budget: parseFloat(e.target.value) || 0 
-                })}
-                placeholder="150000"
-                className="h-8 w-32 text-sm"
-              />
-              <span className="text-xs text-muted-foreground">€ HT</span>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
-                <Percent className="h-3.5 w-3.5" strokeWidth={1.25} />
-                Taux honoraires
-              </Label>
-              <Input
-                type="number"
-                value={feePercentage || ''}
-                onChange={(e) => onDocumentChange({ 
-                  ...document, 
-                  fee_percentage: parseFloat(e.target.value) || 0 
-                })}
-                placeholder="12"
-                step="0.5"
-                className="h-8 w-20 text-sm"
-              />
-              <span className="text-xs text-muted-foreground">%</span>
-            </div>
-
-            {constructionBudget > 0 && feePercentage > 0 && (
+            {/* If we have percentage lines, show the estimated amount prominently */}
+            {hasPercentageLines ? (
               <>
-                <div className="h-6 w-px bg-border" />
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-semibold text-primary">
-                    {formatCurrency(totalFees)}
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-100/50 dark:bg-blue-900/30 rounded-lg">
+                    <span className="text-xs text-muted-foreground">Honoraires estimés</span>
+                    <span className="text-lg font-bold text-primary">
+                      {formatCurrency(percentageTotal)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-muted-foreground">
+                    sur {formatCurrency(constructionBudget)} ({totalPercentage.toFixed(1)}%)
                   </span>
-                  <span className="text-xs text-muted-foreground">honoraires à répartir</span>
                 </div>
+
+                <div className="h-6 w-px bg-border" />
+
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                    Budget
+                  </Label>
+                  <Input
+                    type="number"
+                    value={constructionBudget || ''}
+                    onChange={(e) => onDocumentChange({ 
+                      ...document, 
+                      construction_budget: parseFloat(e.target.value) || 0 
+                    })}
+                    placeholder="150000"
+                    className="h-7 w-28 text-xs"
+                  />
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground whitespace-nowrap">
+                    Taux
+                  </Label>
+                  <Input
+                    type="number"
+                    value={feePercentage || ''}
+                    onChange={(e) => onDocumentChange({ 
+                      ...document, 
+                      fee_percentage: parseFloat(e.target.value) || 0 
+                    })}
+                    placeholder="12"
+                    step="0.5"
+                    className="h-7 w-16 text-xs"
+                  />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
+              </>
+            ) : (
+              /* No percentage lines yet - prompt to enter budget */
+              <>
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+                    <Euro className="h-3.5 w-3.5" strokeWidth={1.25} />
+                    Budget travaux
+                  </Label>
+                  <Input
+                    type="number"
+                    value={constructionBudget || ''}
+                    onChange={(e) => onDocumentChange({ 
+                      ...document, 
+                      construction_budget: parseFloat(e.target.value) || 0 
+                    })}
+                    placeholder="Ex: 150000"
+                    className="h-8 w-36 text-sm"
+                  />
+                  <span className="text-xs text-muted-foreground">€ HT</span>
+                </div>
+                
+                <div className="flex items-center gap-2">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
+                    <Percent className="h-3.5 w-3.5" strokeWidth={1.25} />
+                    Taux honoraires
+                  </Label>
+                  <Input
+                    type="number"
+                    value={feePercentage || ''}
+                    onChange={(e) => onDocumentChange({ 
+                      ...document, 
+                      fee_percentage: parseFloat(e.target.value) || 0 
+                    })}
+                    placeholder="12"
+                    step="0.5"
+                    className="h-8 w-20 text-sm"
+                  />
+                  <span className="text-xs text-muted-foreground">%</span>
+                </div>
+
+                {constructionBudget > 0 && feePercentage > 0 && (
+                  <>
+                    <div className="h-6 w-px bg-border" />
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold text-primary">
+                        {formatCurrency(totalFees)}
+                      </span>
+                      <span className="text-xs text-muted-foreground">honoraires à répartir</span>
+                    </div>
+                  </>
+                )}
               </>
             )}
 
