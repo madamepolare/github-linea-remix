@@ -32,25 +32,64 @@ export function useEntityConversations() {
     queryFn: async (): Promise<EntityConversation[]> => {
       if (!user || !activeWorkspace) return [];
 
-      // Get communications where I'm mentioned or I created
+      // First, get all entities where user is assigned
+      // Tasks: check assigned_to array field
+      const { data: assignedTasks } = await supabase
+        .from("tasks")
+        .select("id")
+        .eq("workspace_id", activeWorkspace.id)
+        .contains("assigned_to", [user.id]);
+      
+      // Projects: check project_members
+      const { data: assignedProjects } = await supabase
+        .from("project_members")
+        .select("project_id")
+        .eq("user_id", user.id);
+
+      const assignedTaskIds = new Set(assignedTasks?.map(t => t.id) || []);
+      const assignedProjectIds = new Set(assignedProjects?.map(p => p.project_id) || []);
+
+      // Get all communications for the workspace
       const { data: communications, error } = await supabase
         .from("communications")
         .select("id, entity_type, entity_id, content, created_at, created_by, mentions")
         .eq("workspace_id", activeWorkspace.id)
-        .or(`created_by.eq.${user.id},mentions.cs.{${user.id}}`)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       if (!communications || communications.length === 0) return [];
 
+      // Filter communications to only include relevant entities
+      const filteredComms = communications.filter((comm) => {
+        // Always include if user created or is mentioned
+        const isCreator = comm.created_by === user.id;
+        const mentions = comm.mentions as string[] | null;
+        const isMentioned = mentions?.includes(user.id);
+        
+        if (isCreator || isMentioned) return true;
+
+        // Check if user is assigned to the entity
+        if (comm.entity_type === "task" && assignedTaskIds.has(comm.entity_id)) {
+          return true;
+        }
+        if (comm.entity_type === "project" && assignedProjectIds.has(comm.entity_id)) {
+          return true;
+        }
+
+        // For other entity types (leads, tenders, etc.), only show if creator/mentioned
+        return false;
+      });
+
+      if (filteredComms.length === 0) return [];
+
       // Group by entity
       const entityMap = new Map<string, {
         entity_type: EntityType;
         entity_id: string;
-        messages: typeof communications;
+        messages: typeof filteredComms;
       }>();
 
-      communications.forEach((comm) => {
+      filteredComms.forEach((comm) => {
         const key = `${comm.entity_type}-${comm.entity_id}`;
         if (!entityMap.has(key)) {
           entityMap.set(key, {
@@ -152,7 +191,7 @@ export function useEntityConversations() {
           entity_status: entityStatus,
           last_message_at: lastMessage.created_at,
           last_message_preview: lastMessage.content.substring(0, 100),
-          unread_count: 0, // TODO: Implement unread tracking
+          unread_count: 0,
           message_count: data.messages.length,
         });
       }
