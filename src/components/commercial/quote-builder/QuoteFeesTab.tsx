@@ -334,6 +334,45 @@ export function QuoteFeesTab({
     }
   };
 
+  // Adjust all phase percentages to total 100%
+  const adjustTo100Percent = () => {
+    const includedPhasesLocal = phases.filter(p => p.isIncluded);
+    const currentTotal = includedPhasesLocal.reduce((sum, p) => sum + p.percentage, 0);
+    
+    if (currentTotal === 0 || includedPhasesLocal.length === 0) {
+      // If no percentages set, distribute evenly
+      const evenPercentage = 100 / phases.filter(p => p.isIncluded).length;
+      setPhases(prev => prev.map(p => 
+        p.isIncluded ? { ...p, percentage: evenPercentage } : p
+      ));
+    } else {
+      // Scale proportionally
+      const scaleFactor = 100 / currentTotal;
+      setPhases(prev => prev.map(p => 
+        p.isIncluded ? { ...p, percentage: Math.round(p.percentage * scaleFactor * 10) / 10 } : p
+      ));
+    }
+    toast.success('Pourcentages ajustés à 100%');
+  };
+
+  // Adjust the global fee percentage
+  const adjustFeePercentage = (delta: number) => {
+    const newFeePercentage = Math.max(0, (feePercentage || 0) + delta);
+    onDocumentChange({ 
+      ...document, 
+      fee_percentage: newFeePercentage 
+    });
+  };
+
+  // Round phase percentages to nearest precision
+  const roundPhasePercentages = (precision: number) => {
+    setPhases(prev => prev.map(p => ({
+      ...p,
+      percentage: Math.round(p.percentage / precision) * precision
+    })));
+    toast.success(`Pourcentages arrondis à ${precision}%`);
+  };
+
   // Get all available phase codes for dropdown
   const availablePhaseCodes = useMemo(() => {
     const disciplineCodes = disciplinePhases.map(p => ({ code: p.code, name: p.name }));
@@ -786,25 +825,91 @@ export function QuoteFeesTab({
         </Droppable>
       </DragDropContext>
 
-      {/* Summary footer */}
-      <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border">
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-muted-foreground">Total phases</span>
-          <Badge 
-            variant={totalPercentage === 100 ? 'default' : 'destructive'}
-            className="font-mono text-xs"
-          >
-            {totalPercentage.toFixed(1)}%
-          </Badge>
-          {totalPercentage !== 100 && (
-            <span className="text-xs text-destructive">
-              (devrait être 100%)
-            </span>
-          )}
+      {/* Summary footer with auto-adjust */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between p-3 bg-muted/20 rounded-lg border">
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-muted-foreground">Total phases</span>
+            <Badge 
+              variant={Math.abs(totalPercentage - 100) < 0.1 ? 'default' : 'destructive'}
+              className="font-mono text-xs"
+            >
+              {totalPercentage.toFixed(1)}%
+            </Badge>
+            {Math.abs(totalPercentage - 100) >= 0.1 && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 text-xs gap-1.5"
+                onClick={adjustTo100Percent}
+              >
+                <Calculator className="h-3.5 w-3.5" strokeWidth={1.25} />
+                Ajuster à 100%
+              </Button>
+            )}
+          </div>
+          <span className="text-lg font-bold tabular-nums">
+            {formatCurrency(totalAmount)}
+          </span>
         </div>
-        <span className="text-lg font-bold tabular-nums">
-          {formatCurrency(totalAmount)}
-        </span>
+
+        {/* Budget adjustment buttons */}
+        <div className="flex items-center justify-between px-1">
+          <span className="text-xs text-muted-foreground">Ajuster le taux</span>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-red-600 hover:text-red-700 hover:bg-red-50"
+              onClick={() => adjustFeePercentage(-1)}
+            >
+              -1%
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-red-500 hover:text-red-600 hover:bg-red-50"
+              onClick={() => adjustFeePercentage(-0.5)}
+            >
+              -0.5%
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-green-500 hover:text-green-600 hover:bg-green-50"
+              onClick={() => adjustFeePercentage(0.5)}
+            >
+              +0.5%
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-7 px-2 text-xs text-green-600 hover:text-green-700 hover:bg-green-50"
+              onClick={() => adjustFeePercentage(1)}
+            >
+              +1%
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-7 px-2 text-xs">
+                  <Percent className="h-3 w-3 mr-1" strokeWidth={1.25} />
+                  Arrondir
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => roundPhasePercentages(1)}>
+                  Arrondir à 1%
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => roundPhasePercentages(5)}>
+                  Arrondir à 5%
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => roundPhasePercentages(10)}>
+                  Arrondir à 10%
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </div>
     </div>
   );
