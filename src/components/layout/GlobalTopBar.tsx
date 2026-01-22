@@ -168,13 +168,13 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
   };
 
   return (
-    <div className="h-12 flex items-center gap-3 px-4 border-b border-border bg-background">
-      {/* Search - Left side, takes all available space */}
-      <div ref={searchRef} className="relative flex-1">
+    <div className="h-12 flex items-center gap-4 px-4 border-b border-border bg-background">
+      {/* Search - Fully extends to fill available space */}
+      <div ref={searchRef} className="relative flex-1 min-w-0">
         <Popover open={searchOpen && (searchQuery.length >= 2 || (searchResults?.length ?? 0) > 0)}>
           <PopoverTrigger asChild>
-            <div className="relative max-w-2xl">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" strokeWidth={THIN_STROKE} />
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground/60" strokeWidth={1.25} />
               <Input
                 ref={inputRef}
                 value={searchQuery}
@@ -183,49 +183,69 @@ export function GlobalTopBar({ onOpenPostIt, postItCount }: GlobalTopBarProps) {
                   setSearchOpen(true);
                 }}
                 onFocus={() => setSearchOpen(true)}
-                placeholder="Rechercher projets, tâches, contacts... ⌘K"
-                className="w-full h-9 pl-9 pr-3 text-sm bg-muted/50 border-0 focus-visible:ring-1"
+                placeholder="Rechercher projets, tâches, contacts..."
+                className="w-full h-9 pl-9 pr-16 text-sm bg-muted/30 border-0 focus-visible:ring-1 focus-visible:ring-foreground/20 placeholder:text-muted-foreground/50"
               />
+              <kbd className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border bg-muted/50 px-1.5 font-mono text-[10px] font-medium text-muted-foreground/70">
+                <span className="text-xs">⌘</span>K
+              </kbd>
             </div>
           </PopoverTrigger>
           <PopoverContent 
-            className="w-[400px] p-0" 
+            className="w-[var(--radix-popover-trigger-width)] min-w-[320px] max-w-[600px] p-0 shadow-lg border-border/50" 
             align="start" 
-            sideOffset={8}
+            sideOffset={4}
             onOpenAutoFocus={(e) => e.preventDefault()}
           >
-            {searchLoading ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                Recherche...
-              </div>
-            ) : searchResults && searchResults.length > 0 ? (
-              <div className="py-2">
-                {searchResults.map((result) => (
-                  <button
-                    key={result.id}
-                    onClick={() => handleSearchSelect(result)}
-                    className="w-full flex items-center gap-3 px-3 py-2 text-left hover:bg-muted transition-colors"
-                  >
-                    <div className="text-muted-foreground">
-                      {getResultIcon(result.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{result.title}</p>
-                      {result.subtitle && (
-                        <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
-                      )}
-                    </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">
-                      {result.type === "task" ? "Tâche" : result.type === "project" ? "Projet" : "Contact"}
-                    </Badge>
-                  </button>
-                ))}
-              </div>
-            ) : searchQuery.length >= 2 ? (
-              <div className="p-4 text-center text-sm text-muted-foreground">
-                Aucun résultat trouvé
-              </div>
-            ) : null}
+            <div className="bg-background rounded-lg overflow-hidden">
+              {searchLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <div className="h-4 w-4 border-2 border-foreground/20 border-t-foreground/60 rounded-full animate-spin" />
+                  <span>Recherche en cours...</span>
+                </div>
+              ) : searchResults && searchResults.length > 0 ? (
+                <div className="py-1 max-h-[400px] overflow-y-auto">
+                  {/* Group results by type */}
+                  {["project", "task", "contact"].map((type) => {
+                    const typeResults = searchResults.filter((r) => r.type === type);
+                    if (typeResults.length === 0) return null;
+                    
+                    const typeLabel = type === "task" ? "Tâches" : type === "project" ? "Projets" : "Contacts";
+                    
+                    return (
+                      <div key={type}>
+                        <div className="px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground/60 bg-muted/30">
+                          {typeLabel}
+                        </div>
+                        {typeResults.map((result) => (
+                          <button
+                            key={result.id}
+                            onClick={() => handleSearchSelect(result)}
+                            className="w-full flex items-center gap-3 px-3 py-2.5 text-left hover:bg-muted/50 transition-colors group"
+                          >
+                            <div className="flex items-center justify-center h-8 w-8 rounded-md bg-muted/50 text-foreground/60 group-hover:bg-foreground group-hover:text-background transition-colors">
+                              {getResultIcon(result.type)}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-foreground truncate">{result.title}</p>
+                              {result.subtitle && (
+                                <p className="text-xs text-muted-foreground truncate">{result.subtitle}</p>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : searchQuery.length >= 2 ? (
+                <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                  <Search className="h-8 w-8 mb-2 opacity-30" strokeWidth={1.25} />
+                  <p className="text-sm">Aucun résultat pour "{searchQuery}"</p>
+                  <p className="text-xs mt-1 opacity-60">Essayez avec d'autres mots-clés</p>
+                </div>
+              ) : null}
+            </div>
           </PopoverContent>
         </Popover>
       </div>
