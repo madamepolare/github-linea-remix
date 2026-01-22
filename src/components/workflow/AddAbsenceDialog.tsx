@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useCreateAbsence, absenceTypeLabels, TeamAbsence } from "@/hooks/useTeamAbsences";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAuth } from "@/contexts/AuthContext";
@@ -50,8 +50,11 @@ export function AddAbsenceDialog({
 
   const [absenceType, setAbsenceType] = useState<TeamAbsence["absence_type"]>("conge_paye");
   const [reason, setReason] = useState("");
-  const [startHalfDay, setStartHalfDay] = useState(false);
-  const [endHalfDay, setEndHalfDay] = useState(false);
+  // For single day: 'full' | 'morning' | 'afternoon'
+  // For multi-day start: 'full' | 'afternoon' (start in afternoon)
+  // For multi-day end: 'full' | 'morning' (end in morning)
+  const [dayPeriod, setDayPeriod] = useState<'full' | 'morning' | 'afternoon'>('full');
+  const [endDayPeriod, setEndDayPeriod] = useState<'full' | 'morning'>('full');
   const [autoApprove, setAutoApprove] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -81,11 +84,15 @@ export function AddAbsenceDialog({
     if (open) {
       setAbsenceType("conge_paye");
       setReason("");
-      setStartHalfDay(false);
-      setEndHalfDay(false);
+      setDayPeriod('full');
+      setEndDayPeriod('full');
       setAutoApprove(canAutoApprove);
     }
   }, [open, canAutoApprove]);
+
+  // Compute half-day flags from period selections
+  const startHalfDay = isMultiDay ? dayPeriod === 'afternoon' : dayPeriod !== 'full';
+  const endHalfDay = isMultiDay && endDayPeriod === 'morning';
 
   const handleSubmit = async () => {
     if (!dateRange.start || !dateRange.end || !member) return;
@@ -123,11 +130,19 @@ export function AddAbsenceDialog({
   // Compute the effective number of days (accounting for half days)
   const effectiveDays = useMemo(() => {
     let days = dateRange.businessDays;
-    if (startHalfDay) days -= 0.5;
-    if (endHalfDay && isMultiDay) days -= 0.5;
-    if (!isMultiDay && startHalfDay) days = 0.5;
-    return days;
-  }, [dateRange.businessDays, startHalfDay, endHalfDay, isMultiDay]);
+    
+    if (isMultiDay) {
+      // Multi-day: check if start is afternoon only
+      if (dayPeriod === 'afternoon') days -= 0.5;
+      // Multi-day: check if end is morning only
+      if (endDayPeriod === 'morning') days -= 0.5;
+    } else {
+      // Single day
+      if (dayPeriod === 'morning' || dayPeriod === 'afternoon') days = 0.5;
+    }
+    
+    return Math.max(0.5, days);
+  }, [dateRange.businessDays, dayPeriod, endDayPeriod, isMultiDay]);
 
   const isRequest = !canAutoApprove || !autoApprove;
 
@@ -204,27 +219,73 @@ export function AddAbsenceDialog({
 
           {/* Half-day options */}
           <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-3">
-              <Checkbox
-                id="start-half-day"
-                checked={startHalfDay}
-                onCheckedChange={(checked) => setStartHalfDay(!!checked)}
-              />
-              <Label htmlFor="start-half-day" className="text-sm cursor-pointer flex-1">
-                Début en demi-journée (après-midi)
-              </Label>
-            </div>
-            {isMultiDay && (
-              <div className="flex items-center gap-3">
-                <Checkbox
-                  id="end-half-day"
-                  checked={endHalfDay}
-                  onCheckedChange={(checked) => setEndHalfDay(!!checked)}
-                />
-                <Label htmlFor="end-half-day" className="text-sm cursor-pointer flex-1">
-                  Fin en demi-journée (matin)
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">
+              {isMultiDay ? "Période du premier jour" : "Période"}
+            </Label>
+            <RadioGroup
+              value={dayPeriod}
+              onValueChange={(v) => setDayPeriod(v as 'full' | 'morning' | 'afternoon')}
+              className="flex gap-2"
+            >
+              <div className="flex items-center">
+                <RadioGroupItem value="full" id="period-full" className="sr-only peer" />
+                <Label 
+                  htmlFor="period-full" 
+                  className="px-3 py-1.5 rounded-md text-sm cursor-pointer border border-transparent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted transition-colors"
+                >
+                  Journée entière
                 </Label>
               </div>
+              <div className="flex items-center">
+                <RadioGroupItem value="morning" id="period-morning" className="sr-only peer" />
+                <Label 
+                  htmlFor="period-morning" 
+                  className="px-3 py-1.5 rounded-md text-sm cursor-pointer border border-transparent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted transition-colors"
+                >
+                  Matin
+                </Label>
+              </div>
+              <div className="flex items-center">
+                <RadioGroupItem value="afternoon" id="period-afternoon" className="sr-only peer" />
+                <Label 
+                  htmlFor="period-afternoon" 
+                  className="px-3 py-1.5 rounded-md text-sm cursor-pointer border border-transparent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted transition-colors"
+                >
+                  Après-midi
+                </Label>
+              </div>
+            </RadioGroup>
+
+            {isMultiDay && (
+              <>
+                <Label className="text-xs text-muted-foreground uppercase tracking-wide pt-2 block">
+                  Période du dernier jour
+                </Label>
+                <RadioGroup
+                  value={endDayPeriod}
+                  onValueChange={(v) => setEndDayPeriod(v as 'full' | 'morning')}
+                  className="flex gap-2"
+                >
+                  <div className="flex items-center">
+                    <RadioGroupItem value="full" id="end-period-full" className="sr-only peer" />
+                    <Label 
+                      htmlFor="end-period-full" 
+                      className="px-3 py-1.5 rounded-md text-sm cursor-pointer border border-transparent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted transition-colors"
+                    >
+                      Journée entière
+                    </Label>
+                  </div>
+                  <div className="flex items-center">
+                    <RadioGroupItem value="morning" id="end-period-morning" className="sr-only peer" />
+                    <Label 
+                      htmlFor="end-period-morning" 
+                      className="px-3 py-1.5 rounded-md text-sm cursor-pointer border border-transparent peer-data-[state=checked]:border-primary peer-data-[state=checked]:bg-primary/10 peer-data-[state=checked]:text-primary hover:bg-muted transition-colors"
+                    >
+                      Matin seulement
+                    </Label>
+                  </div>
+                </RadioGroup>
+              </>
             )}
           </div>
 
