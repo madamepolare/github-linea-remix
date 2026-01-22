@@ -935,18 +935,21 @@ export default function QuoteBuilder() {
                     onDocumentChange={handleDocumentChange}
                     lines={lines}
                     onLinesChange={handleLinesChange}
-                    showFeesSubTab={hasBothFeesAndLines}
+                    // Always show the hybrid UI when the tab exists so users can access
+                    // both % phases (honoraires) and direct pricing (prestations).
+                    showFeesSubTab={true}
                   />
                 </TabsContent>
               )}
 
               {processedTabs.includes('lines') && !hasBothFeesAndLines && (
                 <TabsContent value="lines" className="m-0 p-4 sm:p-6">
-                  <QuoteLinesEditor
-                    lines={lines}
-                    onLinesChange={handleLinesChange}
+                  <QuoteFeesAndLinesTab
                     document={document}
                     onDocumentChange={handleDocumentChange}
+                    lines={lines}
+                    onLinesChange={handleLinesChange}
+                    showFeesSubTab={true}
                   />
                 </TabsContent>
               )}
