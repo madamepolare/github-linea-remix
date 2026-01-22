@@ -213,7 +213,7 @@ export function MainLayout() {
         className={cn(
           "min-h-screen flex flex-col transition-all duration-200 ease-out",
           "pt-14 pb-20 lg:pt-0 lg:pb-0", // Account for mobile header (h-14) + bottom nav (h-16 + safe area padding)
-          collapsed ? "lg:pl-[56px]" : "lg:pl-[220px]"
+          collapsed ? "lg:pl-[48px]" : "lg:pl-[220px]"
         )}
       >
         {/* Global TopBar with search, actions, post-it, timer - hidden on mobile */}
