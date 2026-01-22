@@ -511,8 +511,8 @@ export function QuoteLinesEditor({
 
   return (
     <div className="space-y-4 sm:space-y-6">
-      {/* Budget & Fee Configuration - shown when any line uses percentage pricing */}
-      {(hasPercentageLines || lines.some(l => l.line_type === 'phase')) && (
+      {/* Budget & Fee Configuration - shown only when lines use percentage pricing */}
+      {hasPercentageLines && (
         <div className="flex flex-wrap items-center gap-4 p-3 bg-muted/30 rounded-lg border border-dashed">
           <div className="flex items-center gap-2">
             <Label className="text-xs text-muted-foreground flex items-center gap-1.5 whitespace-nowrap">
