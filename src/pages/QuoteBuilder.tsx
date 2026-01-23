@@ -197,6 +197,7 @@ export default function QuoteBuilder() {
   const [showSendDialog, setShowSendDialog] = useState(false);
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState(false);
   const [showUnlockDialog, setShowUnlockDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [isManuallyUnlocked, setIsManuallyUnlocked] = useState(false);
   const [selectedThemeId, setSelectedThemeId] = useState<string | null>(null);
   
@@ -657,7 +658,6 @@ export default function QuoteBuilder() {
   const canClickSave = !isSaving && !isLocked;
   
   // Delete quote handler
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const handleDeleteQuote = async () => {
     if (!id || isNew) return;
     
