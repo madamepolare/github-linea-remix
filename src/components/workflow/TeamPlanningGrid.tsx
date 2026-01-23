@@ -955,8 +955,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               </Button>
             </div>
             
-            {/* Liste des membres - overflow hidden, sync via scroll event */}
-            <div id="members-scroll-container" className="flex-1 overflow-hidden">
+            {/* Liste des membres - overflow auto, sync via scroll event from grid */}
+            <div id="members-scroll-container" className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
               {filteredMembers.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   {teamColumnCollapsed ? '' : 'Aucun membre'}
