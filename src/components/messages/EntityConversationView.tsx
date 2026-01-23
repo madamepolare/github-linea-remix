@@ -201,8 +201,8 @@ export function EntityConversationView({ entityKey, onClose, onBack }: EntityCon
         </div>
       </ScrollArea>
 
-      {/* Input - Sticky at bottom (always visible) */}
-      <div className="shrink-0 sticky bottom-0 z-10 p-3 md:p-4 border-t bg-background safe-area-inset-bottom">
+      {/* Input - Fixed at bottom (always visible) */}
+      <div className="shrink-0 p-3 md:p-4 pb-8 md:pb-6 border-t bg-background">
         <MessageInput
           channelName={getEntityTypeLabel(entityType)}
           onSend={handleSend}

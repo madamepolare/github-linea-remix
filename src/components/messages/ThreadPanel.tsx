@@ -92,8 +92,8 @@ export function ThreadPanel({ parentMessageId, channelId, onClose }: ThreadPanel
         </div>
       </ScrollArea>
 
-      {/* Reply Input */}
-      <div className="shrink-0 sticky bottom-0 z-10 p-4 border-t bg-background safe-area-inset-bottom">
+      {/* Reply Input - Fixed at bottom */}
+      <div className="shrink-0 p-4 pb-8 md:pb-6 border-t bg-background">
         <MessageInput
           channelName="fil"
           onSend={handleSendReply}

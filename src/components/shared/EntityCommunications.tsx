@@ -707,7 +707,7 @@ export function EntityCommunications({
       </div>
 
       {/* Create new communication - fixed at bottom */}
-      <div className="shrink-0 sticky bottom-0 z-10 border-t bg-background pt-3 space-y-3 safe-area-inset-bottom">
+      <div className="shrink-0 border-t bg-background pt-3 pb-6 space-y-3">
         {/* Type selector - compact pills */}
         <div className="flex items-center gap-1.5">
           {(["comment", "exchange", "note"] as const).map((type) => {
