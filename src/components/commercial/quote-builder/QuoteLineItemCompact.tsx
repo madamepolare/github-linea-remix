@@ -531,336 +531,284 @@ export function QuoteLineItemCompact({
           </CollapsibleTrigger>
         </div>
 
-        {/* Expanded content with tabs */}
+        {/* Expanded content - simplified (no Tarification tab since values are in header) */}
         <CollapsibleContent>
           <div className="border-t bg-gradient-to-b from-muted/30 to-transparent">
-            <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
-              <div className="px-4 pt-3 border-b bg-muted/20">
-                <TabsList className="h-8 bg-transparent p-0 gap-4 border-0">
-                  <TabsTrigger 
-                    value="pricing" 
-                    className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
-                  >
-                    <Euro className="h-3 w-3 mr-1.5" />
-                    Tarification
-                  </TabsTrigger>
-                  {(features.showMemberAssignment || features.showSkillAssignment) && (
-                    <TabsTrigger 
-                      value="resources" 
-                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
-                    >
-                      <User className="h-3 w-3 mr-1.5" />
-                      Ressources
-                    </TabsTrigger>
-                  )}
-                  {features.showDates && (
-                    <TabsTrigger 
-                      value="planning" 
-                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
-                    >
-                      <Clock className="h-3 w-3 mr-1.5" />
-                      Planning
-                    </TabsTrigger>
-                  )}
-                  {(features.showPurchasePrice || features.showCostAndMargin) && (
-                    <TabsTrigger 
-                      value="costs" 
-                      className="h-7 px-0 text-xs bg-transparent border-0 shadow-none data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-foreground data-[state=inactive]:text-muted-foreground"
-                    >
-                      <TrendingUp className="h-3 w-3 mr-1.5" />
-                      Coûts
-                    </TabsTrigger>
-                  )}
-                </TabsList>
-              </div>
-
-              <div className="p-4">
-                {/* Description always visible */}
-                <div className="mb-4 space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-xs text-muted-foreground font-medium">Description</Label>
-                    <AIDescriptionButton
-                      line={line}
-                      projectType={document.project_type}
-                      projectDescription={document.description}
-                      onDescriptionGenerated={(desc) => updateLine(line.id, { phase_description: desc })}
-                    />
-                  </div>
-                  <Textarea
-                    value={line.phase_description || ''}
-                    onChange={(e) => updateLine(line.id, { phase_description: e.target.value })}
-                    placeholder="Description détaillée de la prestation..."
-                    rows={2}
-                    className="resize-none"
+            <div className="p-4 space-y-4">
+              {/* Description - always visible */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs text-muted-foreground font-medium">Description</Label>
+                  <AIDescriptionButton
+                    line={line}
+                    projectType={document.project_type}
+                    projectDescription={document.description}
+                    onDescriptionGenerated={(desc) => updateLine(line.id, { phase_description: desc })}
                   />
                 </div>
+                <Textarea
+                  value={line.phase_description || ''}
+                  onChange={(e) => updateLine(line.id, { phase_description: e.target.value })}
+                  placeholder="Description détaillée de la prestation..."
+                  rows={2}
+                  className="resize-none"
+                />
+              </div>
 
-                {/* Tab: Tarification */}
-                <TabsContent value="pricing" className="m-0 space-y-4">
-                  <div className="grid grid-cols-4 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Quantité</Label>
-                      <Input
-                        type="number"
-                        value={line.quantity}
-                        onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 1 })}
-                        min={0}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Unité</Label>
-                      <Select value={line.unit} onValueChange={(v) => updateLine(line.id, { unit: v })}>
-                        <SelectTrigger className="h-9">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {UNIT_OPTIONS.map(opt => (
-                            <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Prix unitaire</Label>
-                      <div className="relative">
-                        <Input
-                          type="number"
-                          value={line.unit_price || 0}
-                          onChange={(e) => updateLine(line.id, { unit_price: parseFloat(e.target.value) || 0 })}
-                          min={0}
-                          className="h-9 pr-8"
-                        />
-                        <Euro className="absolute right-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                      </div>
-                    </div>
-                    {features.showBillingType && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Facturation</Label>
-                        <Select value={line.billing_type} onValueChange={(v) => updateLine(line.id, { billing_type: v as BillingType })}>
-                          <SelectTrigger className="h-9">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.entries(BILLING_TYPE_LABELS).map(([value, label]) => (
-                              <SelectItem key={value} value={value}>{label}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
+              {/* Row: Réf BPU + Facturation - always visible */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Hash className="h-3 w-3" />
+                    Réf. Marché / BPU
+                  </Label>
+                  <Input
+                    value={line.pricing_ref || ''}
+                    onChange={(e) => updateLine(line.id, { pricing_ref: e.target.value })}
+                    placeholder="Ex: ARCHI-001, LOT-02..."
+                    className="h-9 font-mono text-sm"
+                  />
+                </div>
+                {features.showBillingType && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs text-muted-foreground">Facturation</Label>
+                    <Select value={line.billing_type} onValueChange={(v) => updateLine(line.id, { billing_type: v as BillingType })}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(BILLING_TYPE_LABELS).map(([value, label]) => (
+                          <SelectItem key={value} value={value}>{label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
-                  
-                  {/* Calculated total */}
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                    <span className="text-sm text-muted-foreground">
-                      {line.quantity} × {formatCurrency(line.unit_price || 0)} =
-                    </span>
-                    <span className="text-lg font-semibold">
-                      {formatCurrency((line.quantity || 1) * (line.unit_price || 0))}
-                    </span>
-                  </div>
-                </TabsContent>
+                )}
+              </div>
 
-                {/* Tab: Resources */}
-                <TabsContent value="resources" className="m-0 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    {features.showMemberAssignment && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Membre assigné</Label>
-                        <Select
-                          value={line.assigned_member_id || 'none'}
-                          onValueChange={(v) => updateLine(line.id, { assigned_member_id: v === 'none' ? undefined : v })}
-                        >
-                          <SelectTrigger className="h-9">
-                            <SelectValue placeholder="Sélectionner..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Non assigné</SelectItem>
-                            {teamMembers?.map(member => (
-                              <SelectItem key={member.user_id} value={member.user_id}>
-                                <div className="flex items-center gap-2">
-                                  <Avatar className="h-5 w-5">
-                                    <AvatarImage src={member.profile?.avatar_url || ''} />
-                                    <AvatarFallback className="text-[10px]">
-                                      {(member.profile?.full_name || '?').charAt(0)}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span>{member.profile?.full_name || 'Membre'}</span>
-                                </div>
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
+              {/* Optional sections with tabs - only show if features are enabled */}
+              {((features.showMemberAssignment || features.showSkillAssignment) || features.showDates || (features.showPurchasePrice || features.showCostAndMargin)) && (
+                <Tabs value={activeSection} onValueChange={setActiveSection} className="w-full">
+                  <TabsList className="h-8 bg-muted/30 p-0.5 gap-0 w-auto">
+                    {(features.showMemberAssignment || features.showSkillAssignment) && (
+                      <TabsTrigger 
+                        value="resources" 
+                        className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                      >
+                        <User className="h-3 w-3 mr-1.5" />
+                        Ressources
+                      </TabsTrigger>
                     )}
-                    {features.showSkillAssignment && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Compétences</Label>
-                        <SkillsMultiSelect
-                          selectedSkillIds={selectedSkillIds}
-                          onSelectionChange={(skillIds) => {
-                            updateLine(line.id, { assigned_skill: JSON.stringify(skillIds) });
-                          }}
-                          placeholder="Sélectionner..."
-                        />
-                      </div>
+                    {features.showDates && (
+                      <TabsTrigger 
+                        value="planning" 
+                        className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                      >
+                        <Clock className="h-3 w-3 mr-1.5" />
+                        Planning
+                      </TabsTrigger>
                     )}
-                  </div>
-                  
-                  {estimatedDays && estimatedDays > 0 && (
-                    <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">Temps estimé:</span>
-                      <span className="text-sm font-medium">{estimatedDays.toFixed(1)} jour{estimatedDays > 1 ? 's' : ''}</span>
-                    </div>
-                  )}
-                </TabsContent>
+                    {(features.showPurchasePrice || features.showCostAndMargin) && (
+                      <TabsTrigger 
+                        value="costs" 
+                        className="h-7 px-3 text-xs data-[state=active]:bg-background data-[state=active]:shadow-sm"
+                      >
+                        <TrendingUp className="h-3 w-3 mr-1.5" />
+                        Coûts
+                      </TabsTrigger>
+                    )}
+                  </TabsList>
 
-                {/* Tab: Planning */}
-                <TabsContent value="planning" className="m-0 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Date début</Label>
-                      <Input
-                        type="date"
-                        value={line.start_date || ''}
-                        onChange={(e) => updateLine(line.id, { start_date: e.target.value })}
-                        className="h-9"
-                      />
-                    </div>
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Date fin</Label>
-                      <Input
-                        type="date"
-                        value={line.end_date || ''}
-                        onChange={(e) => updateLine(line.id, { end_date: e.target.value })}
-                        className="h-9"
-                      />
-                    </div>
-                  </div>
-                  
-                  {features.showRecurrence && (
-                    <div className="space-y-1.5">
-                      <Label className="text-xs text-muted-foreground">Récurrence (mois)</Label>
-                      <Input
-                        type="number"
-                        value={line.recurrence_months || ''}
-                        onChange={(e) => updateLine(line.id, { recurrence_months: parseInt(e.target.value) || undefined })}
-                        placeholder="Non récurrent"
-                        className="h-9 w-32"
-                        min={1}
-                      />
-                    </div>
-                  )}
-                </TabsContent>
-
-                {/* Tab: Costs */}
-                <TabsContent value="costs" className="m-0 space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
-                    {features.showPricingRef && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Réf. BPU</Label>
-                        <Input
-                          value={line.pricing_ref || ''}
-                          onChange={(e) => updateLine(line.id, { pricing_ref: e.target.value })}
-                          placeholder="Ex: ARCHI-001"
-                          className="h-9 font-mono text-sm"
-                        />
+                  <div className="mt-4">
+                    {/* Tab: Resources */}
+                    <TabsContent value="resources" className="m-0 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        {features.showMemberAssignment && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Membre assigné</Label>
+                            <Select
+                              value={line.assigned_member_id || 'none'}
+                              onValueChange={(v) => updateLine(line.id, { assigned_member_id: v === 'none' ? undefined : v })}
+                            >
+                              <SelectTrigger className="h-9">
+                                <SelectValue placeholder="Sélectionner..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="none">Non assigné</SelectItem>
+                                {teamMembers?.map(member => (
+                                  <SelectItem key={member.user_id} value={member.user_id}>
+                                    <div className="flex items-center gap-2">
+                                      <Avatar className="h-5 w-5">
+                                        <AvatarImage src={member.profile?.avatar_url || ''} />
+                                        <AvatarFallback className="text-[10px]">
+                                          {(member.profile?.full_name || '?').charAt(0)}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span>{member.profile?.full_name || 'Membre'}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+                        {features.showSkillAssignment && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Compétences</Label>
+                            <SkillsMultiSelect
+                              selectedSkillIds={selectedSkillIds}
+                              onSelectionChange={(skillIds) => {
+                                updateLine(line.id, { assigned_skill: JSON.stringify(skillIds) });
+                              }}
+                              placeholder="Sélectionner..."
+                            />
+                          </div>
+                        )}
                       </div>
-                    )}
-                    
-                    {features.showPurchasePrice && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground flex items-center gap-1">
-                          Coût {isExternalLine ? '(externe)' : '(interne)'}
-                          {CostSourceIcon && costSource !== 'manual' && costSource !== 'none' && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Hash className="h-3 w-3 text-muted-foreground cursor-help" />
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                <p>Source: {costSourceConfig.label}</p>
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </Label>
-                        <div className="relative">
+                      
+                      {estimatedDays && estimatedDays > 0 && (
+                        <div className="flex items-center gap-2 p-3 rounded-lg bg-muted/50">
+                          <Clock className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm text-muted-foreground">Temps estimé:</span>
+                          <span className="text-sm font-medium">{estimatedDays.toFixed(1)} jour{estimatedDays > 1 ? 's' : ''}</span>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    {/* Tab: Planning */}
+                    <TabsContent value="planning" className="m-0 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Date début</Label>
+                          <Input
+                            type="date"
+                            value={line.start_date || ''}
+                            onChange={(e) => updateLine(line.id, { start_date: e.target.value })}
+                            className="h-9"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Date fin</Label>
+                          <Input
+                            type="date"
+                            value={line.end_date || ''}
+                            onChange={(e) => updateLine(line.id, { end_date: e.target.value })}
+                            className="h-9"
+                          />
+                        </div>
+                      </div>
+                      
+                      {features.showRecurrence && (
+                        <div className="space-y-1.5">
+                          <Label className="text-xs text-muted-foreground">Récurrence (mois)</Label>
                           <Input
                             type="number"
-                            value={line.purchase_price || ''}
-                            onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
-                            placeholder={!isExternalLine && effectivePurchasePrice > 0 ? `Auto: ${effectivePurchasePrice.toFixed(0)}` : '0'}
-                            className="h-9 pr-16"
+                            value={line.recurrence_months || ''}
+                            onChange={(e) => updateLine(line.id, { recurrence_months: parseInt(e.target.value) || undefined })}
+                            placeholder="Non récurrent"
+                            className="h-9 w-32"
+                            min={1}
                           />
-                          {CostSourceIcon && (
-                            <div className={cn(
-                              "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
-                              costSourceConfig.bgColor,
-                              costSourceConfig.color
-                            )}>
-                              <CostSourceIcon className="h-3 w-3" />
-                            </div>
-                          )}
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </TabsContent>
 
-                    {features.showCostAndMargin && (
-                      <div className="space-y-1.5">
-                        <Label className="text-xs text-muted-foreground">Marge</Label>
-                        <div className={cn(
-                          "h-9 flex items-center justify-between px-3 rounded-md border",
-                          effectiveMarginPercentage < 15 ? 'bg-red-50 border-red-200' :
-                          effectiveMarginPercentage < 30 ? 'bg-amber-50 border-amber-200' :
-                          'bg-green-50 border-green-200'
-                        )}>
-                          <span className={cn(
-                            "font-semibold",
-                            effectiveMarginPercentage < 15 ? 'text-red-700' :
-                            effectiveMarginPercentage < 30 ? 'text-amber-700' :
-                            'text-green-700'
-                          )}>
-                            {effectiveMarginPercentage.toFixed(1)}%
-                          </span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatCurrency(effectiveMargin)}
-                          </span>
+                    {/* Tab: Costs */}
+                    <TabsContent value="costs" className="m-0 space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        {features.showPurchasePrice && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground flex items-center gap-1">
+                              Coût {isExternalLine ? '(externe)' : '(interne)'}
+                              {CostSourceIcon && costSource !== 'manual' && costSource !== 'none' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Hash className="h-3 w-3 text-muted-foreground cursor-help" />
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>Source: {costSourceConfig.label}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </Label>
+                            <div className="relative">
+                              <Input
+                                type="number"
+                                value={line.purchase_price || ''}
+                                onChange={(e) => updateLine(line.id, { purchase_price: parseFloat(e.target.value) || undefined })}
+                                placeholder={!isExternalLine && effectivePurchasePrice > 0 ? `Auto: ${effectivePurchasePrice.toFixed(0)}` : '0'}
+                                className="h-9 pr-16"
+                              />
+                              {CostSourceIcon && (
+                                <div className={cn(
+                                  "absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1 text-xs px-1.5 py-0.5 rounded",
+                                  costSourceConfig.bgColor,
+                                  costSourceConfig.color
+                                )}>
+                                  <CostSourceIcon className="h-3 w-3" />
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {features.showCostAndMargin && (
+                          <div className="space-y-1.5">
+                            <Label className="text-xs text-muted-foreground">Marge</Label>
+                            <div className={cn(
+                              "h-9 flex items-center justify-between px-3 rounded-md border",
+                              effectiveMarginPercentage < 15 ? 'bg-red-50 border-red-200' :
+                              effectiveMarginPercentage < 30 ? 'bg-amber-50 border-amber-200' :
+                              'bg-green-50 border-green-200'
+                            )}>
+                              <span className={cn(
+                                "font-semibold",
+                                effectiveMarginPercentage < 15 ? 'text-red-700' :
+                                effectiveMarginPercentage < 30 ? 'text-amber-700' :
+                                'text-green-700'
+                              )}>
+                                {effectiveMarginPercentage.toFixed(1)}%
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatCurrency(effectiveMargin)}
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Cost breakdown for transparency */}
+                      {features.showCostAndMargin && (effectivePurchasePrice > 0 || (line.purchase_price && line.purchase_price > 0)) && (
+                        <div className="p-3 rounded-lg bg-muted/30 space-y-2 text-sm">
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Prix de vente</span>
+                            <span className="font-medium">{formatCurrency(line.amount || 0)}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground flex items-center gap-1">
+                              Coût de revient
+                              {isExternalLine && <Badge variant="outline" className="text-[10px] h-4">Externe</Badge>}
+                            </span>
+                            <span className="font-medium text-destructive">
+                              -{formatCurrency(isExternalLine ? (line.purchase_price || 0) : effectivePurchasePrice)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between pt-2 border-t">
+                            <span className="font-medium">Marge nette</span>
+                            <span className={cn(
+                              "font-semibold",
+                              effectiveMargin < 0 ? 'text-red-600' : 'text-green-600'
+                            )}>
+                              {formatCurrency(effectiveMargin)}
+                            </span>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </TabsContent>
                   </div>
-                  
-                  {/* Cost breakdown for transparency */}
-                  {features.showCostAndMargin && (effectivePurchasePrice > 0 || (line.purchase_price && line.purchase_price > 0)) && (
-                    <div className="p-3 rounded-lg bg-muted/30 space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground">Prix de vente</span>
-                        <span className="font-medium">{formatCurrency(line.amount || 0)}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span className="text-muted-foreground flex items-center gap-1">
-                          Coût de revient
-                          {isExternalLine && <Badge variant="outline" className="text-[10px] h-4">Externe</Badge>}
-                        </span>
-                        <span className="font-medium text-destructive">
-                          -{formatCurrency(isExternalLine ? (line.purchase_price || 0) : effectivePurchasePrice)}
-                        </span>
-                      </div>
-                      <div className="flex justify-between pt-2 border-t">
-                        <span className="font-medium">Marge nette</span>
-                        <span className={cn(
-                          "font-semibold",
-                          effectiveMargin < 0 ? 'text-red-600' : 'text-green-600'
-                        )}>
-                          {formatCurrency(effectiveMargin)}
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </div>
-            </Tabs>
+                </Tabs>
+              )}
+            </div>
           </div>
         </CollapsibleContent>
       </div>
