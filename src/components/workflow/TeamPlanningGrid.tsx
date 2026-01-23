@@ -69,6 +69,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   const [memberFilterOpen, setMemberFilterOpen] = useState(false);
   const [projectFilterOpen, setProjectFilterOpen] = useState(false);
   const [teamFilterOpen, setTeamFilterOpen] = useState(false);
+
+  // Scroll sync (members column <-> grid)
+  const membersScrollRef = useRef<HTMLDivElement | null>(null);
+  const gridScrollRef = useRef<HTMLDivElement | null>(null);
+  const isSyncingScrollRef = useRef(false);
   
   // Time entry dialog state (add) - supports multi-day selection
   const [timeEntryDialogOpen, setTimeEntryDialogOpen] = useState(false);
@@ -955,8 +960,24 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               </Button>
             </div>
             
-            {/* Liste des membres - overflow auto, sync via scroll event from grid */}
-            <div id="members-scroll-container" className="flex-1 overflow-y-auto" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {/* Liste des membres - overflow auto, scroll sync with grid */}
+            <div
+              ref={membersScrollRef}
+              className="flex-1 overflow-y-auto"
+              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+              onScroll={(e) => {
+                if (isSyncingScrollRef.current) return;
+                isSyncingScrollRef.current = true;
+                const scrollTop = (e.target as HTMLElement).scrollTop;
+                if (gridScrollRef.current) {
+                  gridScrollRef.current.scrollTop = scrollTop;
+                }
+                // release on next frame to avoid feedback loop
+                requestAnimationFrame(() => {
+                  isSyncingScrollRef.current = false;
+                });
+              }}
+            >
               {filteredMembers.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   {teamColumnCollapsed ? '' : 'Aucun membre'}
@@ -991,17 +1012,21 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           </div>
 
           {/* Grille des jours (scrollable) */}
-          <div 
-            className="flex-1 overflow-auto"
-            onScroll={(e) => {
-              // Sync vertical scroll with members column
-              const scrollTop = (e.target as HTMLElement).scrollTop;
-              const membersContainer = document.getElementById('members-scroll-container');
-              if (membersContainer) {
-                membersContainer.scrollTop = scrollTop;
-              }
-            }}
-          >
+           <div
+             ref={gridScrollRef}
+             className="flex-1 overflow-auto"
+             onScroll={(e) => {
+               if (isSyncingScrollRef.current) return;
+               isSyncingScrollRef.current = true;
+               const scrollTop = (e.target as HTMLElement).scrollTop;
+               if (membersScrollRef.current) {
+                 membersScrollRef.current.scrollTop = scrollTop;
+               }
+               requestAnimationFrame(() => {
+                 isSyncingScrollRef.current = false;
+               });
+             }}
+           >
             <div className="min-w-max">
               {/* Header des mois et jours */}
               <div className="sticky top-0 bg-background z-10 border-b">
