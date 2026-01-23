@@ -964,7 +964,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             {/* Liste des membres - overflow auto, scroll sync with grid */}
             <div
               ref={membersScrollRef}
-              className="flex-1 overflow-y-auto"
+              className="flex-1 overflow-y-scroll [&::-webkit-scrollbar]:w-0"
               style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
               onScroll={(e) => {
                 if (isSyncingScrollRef.current) return;
@@ -1067,7 +1067,8 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             {/* Body scrollable (vertical + horizontal) */}
             <div
               ref={gridScrollRef}
-              className="flex-1 overflow-auto"
+              className="flex-1 overflow-auto [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-vertical]:w-0 [&::-webkit-scrollbar-track]:bg-muted/30 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/30 [&::-webkit-scrollbar-thumb]:rounded-full"
+              style={{ scrollbarWidth: 'thin', msOverflowStyle: 'none', overflowY: 'scroll' }}
               onScroll={(e) => {
                 const el = e.currentTarget;
 
