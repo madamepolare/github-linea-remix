@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Sparkles, Loader2, Wand2, FileText, AlertCircle, Settings } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, FileText, AlertCircle, Settings, Percent, Euro, Layers } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
@@ -8,11 +8,13 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
+import { cn } from '@/lib/utils';
 
 interface AIQuoteGeneratorProps {
   document: Partial<QuoteDocument>;
@@ -29,6 +31,29 @@ interface GeneratedQuote {
   reasoning: string;
 }
 
+type GenerationMode = 'percentage' | 'fixed' | 'complete';
+
+const GENERATION_MODES: { value: GenerationMode; label: string; icon: React.ReactNode; description: string }[] = [
+  { 
+    value: 'percentage', 
+    label: 'Honoraires %', 
+    icon: <Percent className="h-4 w-4" />,
+    description: 'Phases calculées en % du budget travaux'
+  },
+  { 
+    value: 'fixed', 
+    label: 'Forfaits', 
+    icon: <Euro className="h-4 w-4" />,
+    description: 'Prestations à prix fixe'
+  },
+  { 
+    value: 'complete', 
+    label: 'Complet', 
+    icon: <Layers className="h-4 w-4" />,
+    description: 'Phases % + services forfaitaires'
+  }
+];
+
 export function AIQuoteGenerator({
   document,
   existingLines,
@@ -42,6 +67,7 @@ export function AIQuoteGenerator({
   const [selectedLines, setSelectedLines] = useState<Set<string>>(new Set());
   const [mode, setMode] = useState<'idle' | 'generating' | 'review'>('idle');
   const [replaceExisting, setReplaceExisting] = useState(false);
+  const [generationMode, setGenerationMode] = useState<GenerationMode>('complete');
 
   // Get phase templates (liste universelle)
   const { templates: phaseTemplates } = usePhaseTemplates();
@@ -53,7 +79,13 @@ export function AIQuoteGenerator({
       return;
     }
 
-    if (activePhaseTemplates.length === 0) {
+    // Check for budget if generating percentage-based phases
+    if ((generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget) {
+      toast.error('Renseignez le budget travaux pour générer des honoraires en %');
+      return;
+    }
+
+    if (activePhaseTemplates.length === 0 && (generationMode === 'percentage' || generationMode === 'complete')) {
       toast.error('Aucune phase définie. Configurez-les dans les paramètres.');
       return;
     }
@@ -77,11 +109,14 @@ export function AIQuoteGenerator({
           projectType: document.project_type,
           projectDescription: document.description || additionalContext,
           projectBudget: document.project_budget,
+          constructionBudget: document.construction_budget,
+          feePercentage: document.fee_percentage,
           projectSurface: document.project_surface,
           documentType: document.document_type,
           clientInfo: document.client_company?.name,
           existingPricingItems: pricingItems,
-          phaseTemplates: phaseTemplatesForAI
+          phaseTemplates: phaseTemplatesForAI,
+          generationMode: generationMode
         }
       });
 
@@ -199,8 +234,18 @@ export function AIQuoteGenerator({
                         </Badge>
                       )}
                       <span className="font-medium truncate">{line.phase_name}</span>
-                      <Badge variant="secondary" className="text-xs ml-auto shrink-0">
-                        {LINE_TYPE_LABELS[line.line_type]}
+                      <Badge 
+                        variant="secondary" 
+                        className={cn(
+                          "text-xs ml-auto shrink-0",
+                          line.pricing_mode === 'percentage' && "bg-blue-100 text-blue-700"
+                        )}
+                      >
+                        {line.pricing_mode === 'percentage' ? (
+                          <><Percent className="h-3 w-3 mr-1" />{line.percentage_fee}%</>
+                        ) : (
+                          LINE_TYPE_LABELS[line.line_type]
+                        )}
                       </Badge>
                     </div>
                     {line.phase_description && (
@@ -281,25 +326,67 @@ export function AIQuoteGenerator({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Phase templates info */}
-        <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <Settings className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm">
-              {activePhaseTemplates.length} phases définies <strong>(liste universelle)</strong>
-            </span>
-          </div>
-          <Link to="/settings/phases" target="_blank" className="text-xs text-primary hover:underline">
-            Gérer →
-          </Link>
+        {/* Generation mode selector */}
+        <div className="space-y-2">
+          <Label className="text-sm">Mode de génération</Label>
+          <ToggleGroup 
+            type="single" 
+            value={generationMode} 
+            onValueChange={(v) => v && setGenerationMode(v as GenerationMode)}
+            className="justify-start gap-2"
+          >
+            {GENERATION_MODES.map((gm) => (
+              <ToggleGroupItem 
+                key={gm.value} 
+                value={gm.value}
+                className={cn(
+                  "flex-1 flex flex-col items-center gap-1 h-auto py-3 px-4 border",
+                  generationMode === gm.value && "border-primary bg-primary/5"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  {gm.icon}
+                  <span className="font-medium text-sm">{gm.label}</span>
+                </div>
+                <span className="text-[10px] text-muted-foreground text-center leading-tight">
+                  {gm.description}
+                </span>
+              </ToggleGroupItem>
+            ))}
+          </ToggleGroup>
         </div>
 
-        {activePhaseTemplates.length === 0 && (
+        {/* Budget reminder for percentage mode */}
+        {(generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget && (
+          <Alert>
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Pour générer des honoraires en %, renseignez le budget travaux dans l'onglet "Général".
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Phase templates info */}
+        {(generationMode === 'percentage' || generationMode === 'complete') && (
+          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+            <div className="flex items-center gap-2">
+              <Settings className="h-4 w-4 text-muted-foreground" />
+              <span className="text-sm">
+                {activePhaseTemplates.length} phases définies
+              </span>
+            </div>
+            <Link to="/settings/phases" target="_blank" className="text-xs text-primary hover:underline">
+              Gérer →
+            </Link>
+          </div>
+        )}
+
+        {activePhaseTemplates.length === 0 && (generationMode === 'percentage' || generationMode === 'complete') && (
           <Alert variant="destructive">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Aucune phase définie pour ce type de projet. 
-              <Link to="/settings/phases" className="underline ml-1">Configurez vos phases</Link> avant de générer un devis.
+              Aucune phase définie. 
+              <Link to="/settings/phases" className="underline ml-1">Configurez vos phases</Link> avant de générer.
             </AlertDescription>
           </Alert>
         )}
@@ -308,7 +395,7 @@ export function AIQuoteGenerator({
           <Alert>
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              Renseignez le type de projet, une description ou un budget dans l'onglet "Général" pour de meilleurs résultats.
+              Renseignez le type de projet, une description ou un budget dans l'onglet "Général".
             </AlertDescription>
           </Alert>
         )}
@@ -325,7 +412,11 @@ export function AIQuoteGenerator({
 
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating || activePhaseTemplates.length === 0}
+          disabled={
+            isGenerating || 
+            ((generationMode === 'percentage' || generationMode === 'complete') && activePhaseTemplates.length === 0) ||
+            ((generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget)
+          }
           className="w-full gap-2"
         >
           {isGenerating ? (
@@ -336,7 +427,9 @@ export function AIQuoteGenerator({
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              Générer le devis avec l'IA
+              {generationMode === 'percentage' && 'Générer honoraires %'}
+              {generationMode === 'fixed' && 'Générer prestations forfaitaires'}
+              {generationMode === 'complete' && 'Générer devis complet'}
             </>
           )}
         </Button>
