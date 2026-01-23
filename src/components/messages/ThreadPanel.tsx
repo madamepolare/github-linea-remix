@@ -36,7 +36,7 @@ export function ThreadPanel({ parentMessageId, channelId, onClose }: ThreadPanel
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b">
         <h3 className="font-semibold">Fil de discussion</h3>
@@ -45,7 +45,7 @@ export function ThreadPanel({ parentMessageId, channelId, onClose }: ThreadPanel
         </Button>
       </div>
 
-      <ScrollArea className="flex-1 px-4">
+      <ScrollArea className="flex-1 min-h-0 px-4">
         <div className="py-4">
           {/* Parent message */}
           {parentMessage && (
@@ -93,7 +93,7 @@ export function ThreadPanel({ parentMessageId, channelId, onClose }: ThreadPanel
       </ScrollArea>
 
       {/* Reply Input */}
-      <div className="p-4 border-t">
+      <div className="shrink-0 sticky bottom-0 z-10 p-4 border-t bg-background safe-area-inset-bottom">
         <MessageInput
           channelName="fil"
           onSend={handleSendReply}
