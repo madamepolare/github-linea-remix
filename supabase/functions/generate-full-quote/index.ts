@@ -33,7 +33,10 @@ serve(async (req) => {
       clientInfo,
       existingPricingItems,
       phaseTemplates,
-      generationMode = 'complete'
+      generationMode = 'complete',
+      targetBudget,
+      bpuItems,
+      bpuName
     } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -41,7 +44,7 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating quote:", { projectType, generationMode, constructionBudget, feePercentage, phasesCount: phaseTemplates?.length });
+    console.log("Generating quote:", { projectType, generationMode, constructionBudget, feePercentage, phasesCount: phaseTemplates?.length, targetBudget, hasBpu: !!bpuItems });
 
     // Calculate total fees for percentage mode
     const totalFees = constructionBudget && feePercentage 
@@ -55,8 +58,20 @@ serve(async (req) => {
         ).join('\n')}`
       : '';
 
+    // Build BPU context if provided
+    const bpuContext = bpuItems && bpuItems.length > 0
+      ? `\n\nGRILLE BPU "${bpuName || 'Grille tarifaire'}" - UTILISE CES RÉFÉRENCES:
+${bpuItems.map((item: any) => 
+  `- Réf: ${item.ref || 'N/A'} | ${item.name} | ${item.unit_price}€/${item.unit}${item.category ? ` [${item.category}]` : ''}`
+).join('\n')}
+
+IMPORTANT: Pour les prestations forfaitaires, utilise UNIQUEMENT les lignes de ce BPU avec leurs références exactes (pricing_ref).`
+      : '';
+
     // Build mode-specific instructions
     let modeInstructions = '';
+    const budgetTarget = targetBudget ? `\nBUDGET CIBLE: ${targetBudget}€ - ajuste les quantités/prestations pour s'en approcher` : '';
+    
     switch (generationMode as GenerationMode) {
       case 'percentage':
         modeInstructions = `
@@ -66,16 +81,16 @@ MODE: HONORAIRES EN POURCENTAGE
 - Le total des percentage_fee doit faire ~100% (réparti selon importance)
 - Calcule amount = (totalFees × percentage_fee) / 100
 - Budget travaux: ${constructionBudget}€, Taux honoraires: ${feePercentage}%, Total honoraires: ${totalFees}€
-- NE PAS générer de services forfaitaires, frais ou options`;
+- NE PAS générer de services forfaitaires, frais ou options${budgetTarget}`;
         break;
       case 'fixed':
         modeInstructions = `
 MODE: PRESTATIONS FORFAITAIRES
 - Génère des lignes de type "service", "option", "expense" avec pricing_mode="fixed"
 - Propose des prestations à prix fixe adaptées au projet
-- Tu peux créer librement des services, options et frais
+${bpuContext ? '- UTILISE les lignes du BPU fourni avec leurs références (pricing_ref)' : '- Tu peux créer librement des services, options et frais'}
 - NE PAS utiliser les phases en pourcentage
-- Les montants doivent être réalistes pour le marché français`;
+- Les montants doivent être réalistes pour le marché français${budgetTarget}`;
         break;
       case 'complete':
       default:
@@ -85,8 +100,9 @@ MODE: DEVIS COMPLET (phases % + forfaits)
 - Le total des percentage_fee des phases doit faire ~100%
 - Budget travaux: ${constructionBudget || 'non renseigné'}€, Taux: ${feePercentage || 12}%
 - Ajoute aussi des services forfaitaires (pricing_mode="fixed") pour compléter
+${bpuContext ? '- Pour les forfaits, UTILISE les lignes du BPU fourni avec leurs références' : ''}
 - Inclus des options et frais pertinents
-- Propose une structure équilibrée entre phases % et forfaits`;
+- Propose une structure équilibrée entre phases % et forfaits${budgetTarget}`;
         break;
     }
 
@@ -99,11 +115,13 @@ RÈGLES POUR LES PHASES (si applicable):
 - Chaque phase doit avoir phase_code correspondant à un code de la liste
 - Respecte les pourcentages recommandés comme base
 ${phaseTemplatesContext}
+${bpuContext}
 
 RÈGLES GÉNÉRALES:
 - Les montants doivent être réalistes pour le marché français
 - Les descriptions doivent être professionnelles
-- Ajoute des livrables pertinents pour chaque phase/service`;
+- Ajoute des livrables pertinents pour chaque phase/service
+- Si un BPU est fourni, utilise le champ pricing_ref pour stocker la référence du BPU`;
 
     const pricingContext = existingPricingItems?.length > 0 
       ? `\n\nGrille tarifaire disponible:\n${existingPricingItems.map((item: any) => `- ${item.name}: ${item.unit_price}€/${item.unit}`).join('\n')}`
@@ -118,6 +136,7 @@ ${feePercentage ? `Taux honoraires: ${feePercentage}%` : ''}
 ${projectBudget ? `Budget projet: ${projectBudget}€` : ''}
 ${projectSurface ? `Surface: ${projectSurface}m²` : ''}
 ${clientInfo ? `Client: ${clientInfo}` : ''}
+${targetBudget ? `Budget cible pour le devis: ${targetBudget}€` : ''}
 ${pricingContext}
 
 Génère les lignes selon le mode demandé.`;
@@ -171,6 +190,10 @@ Génère les lignes selon le mode demandé.`;
                           type: "string",
                           enum: ["percentage", "fixed"],
                           description: "Mode de tarification: percentage pour les phases en %, fixed pour les forfaits"
+                        },
+                        pricing_ref: {
+                          type: "string",
+                          description: "Référence BPU/marché de la ligne (si applicable)"
                         },
                         percentage_fee: { 
                           type: "number", 

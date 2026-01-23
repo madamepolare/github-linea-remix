@@ -1,17 +1,20 @@
 import { useState } from 'react';
-import { Sparkles, Loader2, Wand2, FileText, AlertCircle, Settings, Percent, Euro, Layers } from 'lucide-react';
+import { Sparkles, Loader2, Wand2, FileText, AlertCircle, Settings, Percent, Euro, Layers, ExternalLink, Target, List } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { QuoteDocument, QuoteLine, LINE_TYPE_LABELS } from '@/types/quoteTypes';
 import { usePhaseTemplates } from '@/hooks/usePhaseTemplates';
+import { usePricingGrids, PricingGrid } from '@/hooks/usePricingGrids';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -38,19 +41,19 @@ const GENERATION_MODES: { value: GenerationMode; label: string; icon: React.Reac
     value: 'percentage', 
     label: 'Honoraires %', 
     icon: <Percent className="h-4 w-4" />,
-    description: 'Phases calculées en % du budget travaux'
+    description: 'Phases en % du budget'
   },
   { 
     value: 'fixed', 
     label: 'Forfaits', 
     icon: <Euro className="h-4 w-4" />,
-    description: 'Prestations à prix fixe'
+    description: 'Prix fixes'
   },
   { 
     value: 'complete', 
     label: 'Complet', 
     icon: <Layers className="h-4 w-4" />,
-    description: 'Phases % + services forfaitaires'
+    description: 'Phases % + forfaits'
   }
 ];
 
@@ -68,10 +71,17 @@ export function AIQuoteGenerator({
   const [mode, setMode] = useState<'idle' | 'generating' | 'review'>('idle');
   const [replaceExisting, setReplaceExisting] = useState(false);
   const [generationMode, setGenerationMode] = useState<GenerationMode>('complete');
+  const [targetBudget, setTargetBudget] = useState<string>('');
+  const [selectedBpuId, setSelectedBpuId] = useState<string>('');
 
   // Get phase templates (liste universelle)
   const { templates: phaseTemplates } = usePhaseTemplates();
   const activePhaseTemplates = phaseTemplates.filter((t) => t.is_active);
+
+  // Get pricing grids (BPU)
+  const { pricingGrids, activeGrids } = usePricingGrids();
+
+  const selectedBpu = pricingGrids.find(g => g.id === selectedBpuId);
 
   const handleGenerate = async () => {
     if (!document.project_type && !document.description) {
@@ -104,6 +114,16 @@ export function AIQuoteGenerator({
         deliverables: t.deliverables
       }));
 
+      // Pass BPU items if selected
+      const bpuItemsForAI = selectedBpu ? (selectedBpu.items as any[]).map((item: any) => ({
+        ref: item.ref || item.pricing_ref || item.code,
+        name: item.name || item.designation,
+        description: item.description,
+        unit: item.unit,
+        unit_price: item.unit_price || item.unitPrice,
+        category: item.category
+      })) : undefined;
+
       const { data, error } = await supabase.functions.invoke('generate-full-quote', {
         body: {
           projectType: document.project_type,
@@ -116,7 +136,10 @@ export function AIQuoteGenerator({
           clientInfo: document.client_company?.name,
           existingPricingItems: pricingItems,
           phaseTemplates: phaseTemplatesForAI,
-          generationMode: generationMode
+          generationMode: generationMode,
+          targetBudget: targetBudget ? parseFloat(targetBudget) : undefined,
+          bpuItems: bpuItemsForAI,
+          bpuName: selectedBpu?.name
         }
       });
 
@@ -198,68 +221,62 @@ export function AIQuoteGenerator({
 
   if (mode === 'review' && generatedQuote) {
     return (
-      <Card className="border-primary/30 bg-primary/5">
+      <Card className="border-primary/30 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Devis généré par l'IA</CardTitle>
+              <CardTitle className="text-lg">Résultat IA</CardTitle>
             </div>
             <Badge variant="secondary">{generatedQuote.lines.length} lignes</Badge>
           </div>
-          <CardDescription>{generatedQuote.reasoning}</CardDescription>
+          <CardDescription className="text-sm">{generatedQuote.reasoning}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <ScrollArea className="h-[300px] pr-4">
+          <ScrollArea className="h-[280px] pr-4">
             <div className="space-y-2">
               {generatedQuote.lines.map((line) => (
                 <div
                   key={line.id}
-                  className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+                  className={cn(
+                    "flex items-start gap-3 p-3 rounded-lg border transition-all",
                     selectedLines.has(line.id) 
-                      ? 'bg-background border-primary/30' 
-                      : 'bg-muted/50 border-transparent'
-                  }`}
+                      ? 'bg-background border-primary/30 shadow-sm' 
+                      : 'bg-muted/30 border-transparent opacity-60'
+                  )}
                 >
                   <Checkbox
                     checked={selectedLines.has(line.id)}
                     onCheckedChange={() => toggleLine(line.id)}
-                    className="mt-1"
+                    className="mt-0.5"
                   />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {line.phase_code && (
-                        <Badge variant="outline" className="text-xs shrink-0">
+                        <Badge variant="outline" className="text-xs font-mono">
                           {line.phase_code}
                         </Badge>
                       )}
-                      <span className="font-medium truncate">{line.phase_name}</span>
+                      <span className="font-medium text-sm">{line.phase_name}</span>
                       <Badge 
                         variant="secondary" 
                         className={cn(
-                          "text-xs ml-auto shrink-0",
-                          line.pricing_mode === 'percentage' && "bg-blue-100 text-blue-700"
+                          "text-xs ml-auto",
+                          line.pricing_mode === 'percentage' && "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400"
                         )}
                       >
                         {line.pricing_mode === 'percentage' ? (
-                          <><Percent className="h-3 w-3 mr-1" />{line.percentage_fee}%</>
+                          <><Percent className="h-3 w-3 mr-0.5" />{line.percentage_fee}%</>
                         ) : (
                           LINE_TYPE_LABELS[line.line_type]
                         )}
                       </Badge>
                     </div>
-                    {line.phase_description && (
-                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {line.phase_description}
-                      </p>
-                    )}
-                    <div className="flex items-center gap-4 mt-2 text-sm">
-                      <span className="text-muted-foreground">
-                        {line.quantity} {line.unit} × {formatCurrency(line.unit_price || 0)}
-                      </span>
-                      <span className="font-semibold">{formatCurrency(line.amount || 0)}</span>
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-muted-foreground">
+                      <span>{line.quantity} {line.unit} × {formatCurrency(line.unit_price || 0)}</span>
+                      <span className="font-semibold text-foreground">{formatCurrency(line.amount || 0)}</span>
                       {!line.is_included && (
-                        <Badge variant="outline" className="text-xs">Option</Badge>
+                        <Badge variant="outline" className="text-[10px]">Option</Badge>
                       )}
                     </div>
                   </div>
@@ -268,45 +285,47 @@ export function AIQuoteGenerator({
             </div>
           </ScrollArea>
 
-          {existingLines.length > 0 && (
-            <div className="flex items-center gap-2 pt-2 border-t mb-2">
-              <Checkbox
-                id="replace-existing"
-                checked={replaceExisting}
-                onCheckedChange={(checked) => setReplaceExisting(checked === true)}
-              />
-              <Label htmlFor="replace-existing" className="text-sm font-normal cursor-pointer">
-                Remplacer les {existingLines.length} lignes existantes
-              </Label>
-            </div>
-          )}
+          <div className="pt-3 border-t space-y-3">
+            {existingLines.length > 0 && (
+              <div className="flex items-center gap-2">
+                <Checkbox
+                  id="replace-existing"
+                  checked={replaceExisting}
+                  onCheckedChange={(checked) => setReplaceExisting(checked === true)}
+                />
+                <Label htmlFor="replace-existing" className="text-sm font-normal cursor-pointer">
+                  Remplacer les {existingLines.length} lignes existantes
+                </Label>
+              </div>
+            )}
 
-          <div className="flex items-center justify-between pt-2 border-t">
-            <div>
-              <p className="text-sm text-muted-foreground">
-                {selectedLines.size} lignes sélectionnées
-              </p>
-              <p className="font-semibold">Total: {formatCurrency(totalSelected)}</p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setMode('idle');
-                  setGeneratedQuote(null);
-                  setReplaceExisting(false);
-                }}
-              >
-                Annuler
-              </Button>
-              <Button
-                onClick={applySelectedLines}
-                disabled={selectedLines.size === 0}
-                variant={replaceExisting ? "destructive" : "default"}
-              >
-                <FileText className="h-4 w-4 mr-2" />
-                {replaceExisting ? 'Remplacer' : 'Ajouter'} ({selectedLines.size})
-              </Button>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground">{selectedLines.size} sélectionnées</p>
+                <p className="font-semibold">{formatCurrency(totalSelected)}</p>
+              </div>
+              <div className="flex gap-2">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setMode('idle');
+                    setGeneratedQuote(null);
+                    setReplaceExisting(false);
+                  }}
+                >
+                  Annuler
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={applySelectedLines}
+                  disabled={selectedLines.size === 0}
+                  variant={replaceExisting ? "destructive" : "default"}
+                >
+                  <FileText className="h-4 w-4 mr-1.5" />
+                  {replaceExisting ? 'Remplacer' : 'Ajouter'}
+                </Button>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -314,129 +333,161 @@ export function AIQuoteGenerator({
     );
   }
 
+  const canGenerate = 
+    (generationMode === 'fixed' || 
+     ((generationMode === 'percentage' || generationMode === 'complete') && 
+      activePhaseTemplates.length > 0 && 
+      document.construction_budget));
+
   return (
-    <Card className="border-dashed">
-      <CardHeader className="pb-3">
+    <Card className="border-dashed border-primary/30">
+      <CardHeader className="pb-2">
         <div className="flex items-center gap-2">
-          <Wand2 className="h-5 w-5 text-primary" />
-          <CardTitle className="text-lg">Génération IA</CardTitle>
+          <div className="p-1.5 rounded-md bg-primary/10">
+            <Wand2 className="h-4 w-4 text-primary" />
+          </div>
+          <CardTitle className="text-base">Génération IA</CardTitle>
         </div>
-        <CardDescription>
-          Générez automatiquement les lignes du devis basé sur le contexte du projet
-        </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
-        {/* Generation mode selector */}
-        <div className="space-y-2">
-          <Label className="text-sm">Mode de génération</Label>
-          <ToggleGroup 
-            type="single" 
-            value={generationMode} 
-            onValueChange={(v) => v && setGenerationMode(v as GenerationMode)}
-            className="justify-start gap-2"
-          >
-            {GENERATION_MODES.map((gm) => (
-              <ToggleGroupItem 
-                key={gm.value} 
-                value={gm.value}
-                className={cn(
-                  "flex-1 flex flex-col items-center gap-1 h-auto py-3 px-4 border",
-                  generationMode === gm.value && "border-primary bg-primary/5"
-                )}
-              >
-                <div className="flex items-center gap-2">
-                  {gm.icon}
-                  <span className="font-medium text-sm">{gm.label}</span>
-                </div>
-                <span className="text-[10px] text-muted-foreground text-center leading-tight">
-                  {gm.description}
-                </span>
-              </ToggleGroupItem>
-            ))}
-          </ToggleGroup>
+        {/* Generation mode selector - compact */}
+        <ToggleGroup 
+          type="single" 
+          value={generationMode} 
+          onValueChange={(v) => v && setGenerationMode(v as GenerationMode)}
+          className="grid grid-cols-3 gap-1"
+        >
+          {GENERATION_MODES.map((gm) => (
+            <ToggleGroupItem 
+              key={gm.value} 
+              value={gm.value}
+              className={cn(
+                "flex flex-col items-center gap-0.5 h-auto py-2 px-2 text-xs border rounded-md",
+                generationMode === gm.value && "border-primary bg-primary/5"
+              )}
+            >
+              {gm.icon}
+              <span className="font-medium">{gm.label}</span>
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+
+        {/* Row: Target budget + BPU selector */}
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              <Target className="h-3 w-3" />
+              Budget cible
+              <span className="text-muted-foreground">(optionnel)</span>
+            </Label>
+            <Input
+              type="number"
+              value={targetBudget}
+              onChange={(e) => setTargetBudget(e.target.value)}
+              placeholder="Ex: 15000"
+              className="h-8 text-sm"
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              <List className="h-3 w-3" />
+              Grille BPU
+              <span className="text-muted-foreground">(optionnel)</span>
+            </Label>
+            <Select value={selectedBpuId} onValueChange={setSelectedBpuId}>
+              <SelectTrigger className="h-8 text-sm">
+                <SelectValue placeholder="Aucune" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Aucune grille</SelectItem>
+                {activeGrids.map((grid) => (
+                  <SelectItem key={grid.id} value={grid.id}>
+                    {grid.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
-        {/* Budget reminder for percentage mode */}
-        {(generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Pour générer des honoraires en %, renseignez le budget travaux dans l'onglet "Général".
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Phase templates info */}
+        {/* Phases & BPU links */}
         {(generationMode === 'percentage' || generationMode === 'complete') && (
-          <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-            <div className="flex items-center gap-2">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-              <span className="text-sm">
-                {activePhaseTemplates.length} phases définies
-              </span>
+          <div className="flex items-center justify-between p-2 bg-muted/40 rounded-md text-xs">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1.5">
+                <Settings className="h-3.5 w-3.5 text-muted-foreground" />
+                <span>{activePhaseTemplates.length} phases</span>
+                <Link to="/settings/phases" target="_blank" className="text-primary hover:underline inline-flex items-center">
+                  <ExternalLink className="h-3 w-3" />
+                </Link>
+              </div>
+              {selectedBpu && (
+                <div className="flex items-center gap-1.5 text-muted-foreground">
+                  <span>•</span>
+                  <span>BPU: {selectedBpu.name}</span>
+                  <Link to="/settings/pricing" target="_blank" className="text-primary hover:underline inline-flex items-center">
+                    <ExternalLink className="h-3 w-3" />
+                  </Link>
+                </div>
+              )}
             </div>
-            <Link to="/settings/phases" target="_blank" className="text-xs text-primary hover:underline">
-              Gérer →
-            </Link>
           </div>
         )}
 
+        {/* Alerts */}
+        {(generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget && (
+          <Alert className="py-2">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertDescription className="text-xs">
+              Renseignez le budget travaux dans "Général" pour les honoraires %.
+            </AlertDescription>
+          </Alert>
+        )}
+
         {activePhaseTemplates.length === 0 && (generationMode === 'percentage' || generationMode === 'complete') && (
-          <Alert variant="destructive">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Aucune phase définie. 
-              <Link to="/settings/phases" className="underline ml-1">Configurez vos phases</Link> avant de générer.
+          <Alert variant="destructive" className="py-2">
+            <AlertCircle className="h-3.5 w-3.5" />
+            <AlertDescription className="text-xs">
+              <Link to="/settings/phases" className="underline">Configurez vos phases</Link> avant de générer.
             </AlertDescription>
           </Alert>
         )}
 
-        {!document.project_type && !document.description && !document.project_budget && (
-          <Alert>
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>
-              Renseignez le type de projet, une description ou un budget dans l'onglet "Général".
-            </AlertDescription>
-          </Alert>
-        )}
-
-        <div className="space-y-2">
-          <Label>Contexte additionnel (optionnel)</Label>
+        {/* Context textarea */}
+        <div className="space-y-1.5">
+          <Label className="text-xs">Contexte additionnel</Label>
           <Textarea
-            placeholder="Décrivez le projet, les besoins spécifiques, le périmètre de la mission..."
+            placeholder="Décrivez le projet, les besoins spécifiques..."
             value={additionalContext}
             onChange={(e) => setAdditionalContext(e.target.value)}
-            rows={3}
+            rows={2}
+            className="text-sm resize-none"
           />
         </div>
 
+        {/* Generate button */}
         <Button
           onClick={handleGenerate}
-          disabled={
-            isGenerating || 
-            ((generationMode === 'percentage' || generationMode === 'complete') && activePhaseTemplates.length === 0) ||
-            ((generationMode === 'percentage' || generationMode === 'complete') && !document.construction_budget)
-          }
+          disabled={isGenerating || !canGenerate}
           className="w-full gap-2"
+          size="sm"
         >
           {isGenerating ? (
             <>
               <Loader2 className="h-4 w-4 animate-spin" />
-              Génération en cours...
+              Génération...
             </>
           ) : (
             <>
               <Sparkles className="h-4 w-4" />
-              {generationMode === 'percentage' && 'Générer honoraires %'}
-              {generationMode === 'fixed' && 'Générer prestations forfaitaires'}
-              {generationMode === 'complete' && 'Générer devis complet'}
+              Générer
             </>
           )}
         </Button>
 
         {existingLines.length > 0 && (
-          <p className="text-xs text-muted-foreground text-center">
-            Les lignes générées seront ajoutées à vos {existingLines.length} lignes existantes
+          <p className="text-[10px] text-muted-foreground text-center">
+            S'ajoutera aux {existingLines.length} lignes existantes
           </p>
         )}
       </CardContent>
