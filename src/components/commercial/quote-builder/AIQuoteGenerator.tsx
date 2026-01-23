@@ -394,12 +394,15 @@ export function AIQuoteGenerator({
               Grille BPU
               <span className="text-muted-foreground">(optionnel)</span>
             </Label>
-            <Select value={selectedBpuId} onValueChange={setSelectedBpuId}>
+            <Select 
+              value={selectedBpuId || 'none'} 
+              onValueChange={(v) => setSelectedBpuId(v === 'none' ? '' : v)}
+            >
               <SelectTrigger className="h-8 text-sm">
                 <SelectValue placeholder="Aucune" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Aucune grille</SelectItem>
+                <SelectItem value="none">Aucune grille</SelectItem>
                 {activeGrids.map((grid) => (
                   <SelectItem key={grid.id} value={grid.id}>
                     {grid.name}
