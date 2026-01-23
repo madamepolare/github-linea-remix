@@ -372,12 +372,34 @@ export function AIQuoteGenerator({
           ))}
         </ToggleGroup>
 
+        {/* Construction budget - required for percentage modes */}
+        {(generationMode === 'percentage' || generationMode === 'complete') && (
+          <div className="space-y-1.5">
+            <Label className="text-xs flex items-center gap-1">
+              <Euro className="h-3 w-3" />
+              Montant travaux (base de calcul %)
+            </Label>
+            <Input
+              type="number"
+              value={document.construction_budget || ''}
+              onChange={(e) => onDocumentChange({ 
+                ...document, 
+                construction_budget: e.target.value ? parseFloat(e.target.value) : undefined 
+              })}
+              placeholder="Ex: 500000"
+              className="h-8 text-sm"
+            />
+          </div>
+        )}
+
         {/* Row: Target budget + BPU selector */}
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1">
               <Target className="h-3 w-3" />
-              Budget cible
+              {(generationMode === 'percentage' || generationMode === 'complete') 
+                ? 'Honoraires cibles' 
+                : 'Budget cible'}
               <span className="text-muted-foreground">(optionnel)</span>
             </Label>
             <Input
