@@ -24,7 +24,6 @@ import {
   AlertCircle,
   RefreshCw,
   Percent,
-  Package,
   Calendar,
   Receipt,
   LucideIcon,
@@ -52,7 +51,7 @@ import {
 import { QuoteGeneralTab } from '@/components/commercial/quote-builder/QuoteGeneralTab';
 import { QuoteLinesEditor } from '@/components/commercial/quote-builder/QuoteLinesEditor';
 import { QuoteFeesAndLinesTab } from '@/components/commercial/quote-builder/QuoteFeesAndLinesTab';
-import { QuoteProductionTab } from '@/components/commercial/quote-builder/QuoteProductionTab';
+
 import { QuotePlanningTab } from '@/components/commercial/quote-builder/QuotePlanningTab';
 import { QuoteInvoicingTab } from '@/components/commercial/quote-builder/QuoteInvoicingTab';
 import { QuoteConditionsTab } from '@/components/commercial/quote-builder/QuoteConditionsTab';
@@ -223,7 +222,6 @@ export default function QuoteBuilder() {
     general: { label: 'Général', icon: FileText },
     fees: { label: 'Honoraires', icon: Percent },
     lines: { label: 'Lignes', icon: List },
-    production: { label: 'Production', icon: Package },
     planning: { label: 'Planning', icon: Calendar },
     invoicing: { label: 'Facturation', icon: FileCheck },
     terms: { label: 'Conditions', icon: FileCheck }
@@ -1023,18 +1021,6 @@ export default function QuoteBuilder() {
                     lines={lines}
                     onLinesChange={handleLinesChange}
                     showFeesSubTab={true}
-                    isLocked={isLocked}
-                  />
-                </TabsContent>
-              )}
-
-              {processedTabs.includes('production') && (
-                <TabsContent value="production" className="m-0 p-4 sm:p-6">
-                  <QuoteProductionTab 
-                    document={document}
-                    onDocumentChange={handleDocumentChange}
-                    lines={lines}
-                    onLinesChange={handleLinesChange}
                     isLocked={isLocked}
                   />
                 </TabsContent>

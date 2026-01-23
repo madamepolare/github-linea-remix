@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/select';
 import { 
   Plus, Trash2, Edit, Download, GripVertical, Building2, Sofa, Theater, 
-  Megaphone, Palette, Globe, FileText, Percent, List, Package, Calendar, 
+  Megaphone, Palette, Globe, FileText, Percent, List, Calendar, 
   FileCheck, Sparkles, Loader2, LayoutTemplate, Settings2, Building, Video, 
   Scale, ChevronDown, ChevronRight, Filter
 } from 'lucide-react';
@@ -61,7 +61,6 @@ const TAB_OPTIONS: { key: BuilderTab; label: string; icon: React.ComponentType<{
   { key: 'general', label: 'Général', icon: FileText },
   { key: 'fees', label: 'Honoraires', icon: Percent },
   { key: 'lines', label: 'Lignes', icon: List },
-  { key: 'production', label: 'Production', icon: Package },
   { key: 'planning', label: 'Planning', icon: Calendar },
   { key: 'terms', label: 'Conditions', icon: FileCheck },
 ];
