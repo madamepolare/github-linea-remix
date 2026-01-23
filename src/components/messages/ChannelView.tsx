@@ -100,7 +100,7 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
   const Icon = isDM ? MessageCircle : (channel.channel_type === "private" ? Lock : Hash);
 
   return (
-    <div className="flex flex-col h-full bg-background relative">
+    <div className="flex flex-col h-full bg-background relative overflow-hidden">
       {/* Channel Header - Mobile optimized */}
       <motion.header 
         initial={{ y: -10, opacity: 0 }}
