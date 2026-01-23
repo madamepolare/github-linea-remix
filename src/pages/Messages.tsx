@@ -119,7 +119,7 @@ export default function Messages() {
   }
 
   return (
-    <div className="flex h-[calc(100vh-4rem)] overflow-hidden bg-background">
+    <div className="flex h-[calc(100vh-4rem-env(safe-area-inset-bottom,0px))] overflow-hidden bg-background pb-safe">
       {/* Desktop: Channel Sidebar */}
       <div className="w-64 border-r flex-shrink-0 hidden md:flex flex-col bg-card/50">
         <ChannelList
