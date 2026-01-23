@@ -687,9 +687,9 @@ export function EntityCommunications({
   const currentProfile = profiles?.find((p) => p.user_id === user?.id);
 
   return (
-    <div className={cn("flex flex-col h-full", className)}>
+    <div className={cn("flex flex-col h-full overflow-hidden", className)}>
       {/* Communications list - scrollable */}
-      <div className="flex-1 overflow-auto space-y-4 pb-4">
+      <div className="flex-1 min-h-0 overflow-auto space-y-4 pb-4">
         <AnimatePresence mode="popLayout">
           {sortedCommunications.map((comm) => renderCommunication(comm))}
         </AnimatePresence>
@@ -707,7 +707,7 @@ export function EntityCommunications({
       </div>
 
       {/* Create new communication - fixed at bottom */}
-      <div className="border-t bg-background pt-3 space-y-3">
+      <div className="shrink-0 sticky bottom-0 z-10 border-t bg-background pt-3 space-y-3 safe-area-inset-bottom">
         {/* Type selector - compact pills */}
         <div className="flex items-center gap-1.5">
           {(["comment", "exchange", "note"] as const).map((type) => {
