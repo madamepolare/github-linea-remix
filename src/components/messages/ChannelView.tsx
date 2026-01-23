@@ -221,7 +221,7 @@ export function ChannelView({ channel, onOpenThread, onBack }: ChannelViewProps)
       </AnimatePresence>
 
       {/* Message Input - Fixed at bottom */}
-      <div className="shrink-0 p-3 md:p-4 border-t bg-background safe-area-inset-bottom">
+      <div className="shrink-0 p-3 md:p-4 border-t bg-background safe-area-inset-bottom pr-4 md:pr-4">
         <MessageInput
           channelName={displayName}
           onSend={handleSendMessage}

@@ -326,7 +326,7 @@ export function MessageInput({ channelName, onSend, isLoading, placeholder, onTy
       {/* Main input container - Clean single-line design */}
       <div 
         className={cn(
-          "relative flex items-center gap-1 rounded-xl border bg-background transition-all duration-200",
+          "relative flex items-center gap-1 rounded-xl border bg-background transition-all duration-200 pr-1",
           isDragging && "opacity-0"
         )}
       >
