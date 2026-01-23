@@ -1015,7 +1015,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
           {/* Grille des jours (header fixe + body scrollable) */}
           <div className="flex-1 overflow-hidden flex flex-col">
             {/* Header des mois et jours - scroll horizontal synchronisé */}
-            <div ref={gridHeaderScrollRef} className="overflow-hidden border-b bg-background shrink-0">
+            {/* IMPORTANT: height must match the left team header (72px incl. border) to keep row borders aligned */}
+            <div
+              ref={gridHeaderScrollRef}
+              className="h-[72px] overflow-hidden border-b bg-background shrink-0 box-border"
+            >
               <div className="min-w-max">
                 {/* Ligne des mois */}
                 <div className="flex h-9 border-b">
