@@ -1021,17 +1021,36 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               className="h-[72px] overflow-hidden border-b bg-background shrink-0 box-border"
             >
               <div className="min-w-max">
-                {/* Ligne des mois */}
+                {/* Ligne des mois - avec highlight pour le jour actuel */}
                 <div className="flex h-9 border-b">
-                  {monthGroups.map((group, idx) => (
-                    <div
-                      key={`${group.month}-${group.year}-${idx}`}
-                      className="flex items-center justify-center text-xs font-semibold capitalize"
-                      style={{ width: group.days.length * CELL_WIDTH }}
-                    >
-                      {group.month} {group.year}
-                    </div>
-                  ))}
+                  {monthGroups.map((group, idx) => {
+                    // Check if today is in this month group
+                    const today = new Date();
+                    const hasTodayInGroup = group.days.some(d => isSameDay(d, today));
+                    
+                    // Calculate position of today within the group for the highlight column
+                    const todayIndex = group.days.findIndex(d => isSameDay(d, today));
+                    
+                    return (
+                      <div
+                        key={`${group.month}-${group.year}-${idx}`}
+                        className="relative flex items-center justify-center text-xs font-semibold capitalize"
+                        style={{ width: group.days.length * CELL_WIDTH }}
+                      >
+                        {/* Today highlight strip in the month row */}
+                        {hasTodayInGroup && todayIndex >= 0 && (
+                          <div 
+                            className="absolute top-0 bottom-0 bg-primary/5"
+                            style={{ 
+                              left: todayIndex * CELL_WIDTH, 
+                              width: CELL_WIDTH 
+                            }}
+                          />
+                        )}
+                        <span className="relative z-10">{group.month} {group.year}</span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* Ligne des jours */}
