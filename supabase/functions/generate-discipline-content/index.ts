@@ -158,7 +158,7 @@ Pour chaque type:
 - icon: Parmi 'FileText', 'Building2', 'Sofa', 'Theater', 'Megaphone', 'Palette', 'Globe'
 - color: Parmi #3B82F6, #8B5CF6, #EC4899, #F59E0B, #10B981, #06B6D4, #EF4444
 - default_fields: {surface: boolean, construction_budget: boolean, address: boolean, city: boolean, budget: boolean}
-- builder_tabs: Array parmi ['general', 'fees', 'lines', 'production', 'planning', 'terms']
+- builder_tabs: Array parmi ['general', 'fees', 'lines', 'planning', 'terms']
 
 Réponds avec un JSON array:
 [{"name": "...", "code": "...", "description": "...", "icon": "...", "color": "...", "default_fields": {...}, "builder_tabs": [...]}]`;

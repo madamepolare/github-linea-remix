@@ -15,7 +15,7 @@ export interface ContractTypeFields {
 }
 
 // Available tabs in the quote builder
-export type BuilderTab = 'general' | 'fees' | 'lines' | 'production' | 'planning' | 'invoicing' | 'terms';
+export type BuilderTab = 'general' | 'fees' | 'lines' | 'planning' | 'invoicing' | 'terms';
 
 export interface ContractType {
   id: string;
@@ -134,7 +134,7 @@ export const DEFAULT_CONTRACT_TYPES: Omit<ContractType, 'id' | 'workspace_id' | 
     color: '#EC4899',
     default_fields: { surface: true, budget: true },
     default_clauses: {},
-    builder_tabs: ['general', 'lines', 'production', 'planning', 'terms'],
+    builder_tabs: ['general', 'lines', 'planning', 'terms'],
     pdf_config: DEFAULT_PDF_CONFIG,
     sort_order: 2,
     is_default: false,
