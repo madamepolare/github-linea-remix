@@ -134,7 +134,7 @@ export default function Messages() {
       </div>
 
       {/* Mobile: Full-screen channel list OR chat view */}
-      <div className="flex-1 flex flex-col min-w-0 md:hidden">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden md:hidden">
         <AnimatePresence mode="wait">
           {showChannelListMobile ? (
             <motion.div
@@ -184,7 +184,7 @@ export default function Messages() {
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: 20 }}
               transition={{ duration: 0.2 }}
-              className="flex-1 flex flex-col"
+              className="flex-1 flex flex-col min-h-0 overflow-hidden"
             >
               {isEntityConversation && activeChannelId ? (
                 <EntityConversationView
@@ -224,7 +224,7 @@ export default function Messages() {
       </div>
 
       {/* Desktop: Main Content */}
-      <div className="flex-1 flex-col min-w-0 hidden md:flex">
+      <div className="flex-1 flex-col min-w-0 overflow-hidden hidden md:flex">
         {isEntityConversation && activeChannelId ? (
           <EntityConversationView
             entityKey={activeChannelId}
