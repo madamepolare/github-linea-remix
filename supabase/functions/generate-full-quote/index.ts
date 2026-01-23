@@ -14,6 +14,8 @@ interface PhaseTemplate {
   deliverables?: string[];
 }
 
+type GenerationMode = 'percentage' | 'fixed' | 'complete';
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -23,12 +25,15 @@ serve(async (req) => {
     const { 
       projectType, 
       projectDescription, 
-      projectBudget, 
+      projectBudget,
+      constructionBudget,
+      feePercentage,
       projectSurface, 
       documentType,
       clientInfo,
       existingPricingItems,
-      phaseTemplates
+      phaseTemplates,
+      generationMode = 'complete'
     } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
@@ -36,49 +41,86 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    console.log("Generating full quote for:", { projectType, documentType, projectBudget, projectSurface, phasesCount: phaseTemplates?.length });
+    console.log("Generating quote:", { projectType, generationMode, constructionBudget, feePercentage, phasesCount: phaseTemplates?.length });
+
+    // Calculate total fees for percentage mode
+    const totalFees = constructionBudget && feePercentage 
+      ? (constructionBudget * feePercentage) / 100 
+      : null;
 
     // Build phase templates context for AI
     const phaseTemplatesContext = phaseTemplates && phaseTemplates.length > 0
-      ? `\n\nPHASES DISPONIBLES (UTILISE UNIQUEMENT CELLES-CI):\n${(phaseTemplates as PhaseTemplate[]).map(p => 
+      ? `\n\nPHASES DISPONIBLES (codes et % recommandés):\n${(phaseTemplates as PhaseTemplate[]).map(p => 
           `- ${p.code}: ${p.name}${p.description ? ` - ${p.description}` : ''}${p.default_percentage ? ` (${p.default_percentage}% recommandé)` : ''} [${p.category}]`
         ).join('\n')}`
       : '';
 
+    // Build mode-specific instructions
+    let modeInstructions = '';
+    switch (generationMode as GenerationMode) {
+      case 'percentage':
+        modeInstructions = `
+MODE: HONORAIRES EN POURCENTAGE
+- Génère UNIQUEMENT des lignes de type "phase" avec pricing_mode="percentage"
+- Chaque phase doit avoir un percentage_fee correspondant à sa part des honoraires totaux
+- Le total des percentage_fee doit faire ~100% (réparti selon importance)
+- Calcule amount = (totalFees × percentage_fee) / 100
+- Budget travaux: ${constructionBudget}€, Taux honoraires: ${feePercentage}%, Total honoraires: ${totalFees}€
+- NE PAS générer de services forfaitaires, frais ou options`;
+        break;
+      case 'fixed':
+        modeInstructions = `
+MODE: PRESTATIONS FORFAITAIRES
+- Génère des lignes de type "service", "option", "expense" avec pricing_mode="fixed"
+- Propose des prestations à prix fixe adaptées au projet
+- Tu peux créer librement des services, options et frais
+- NE PAS utiliser les phases en pourcentage
+- Les montants doivent être réalistes pour le marché français`;
+        break;
+      case 'complete':
+      default:
+        modeInstructions = `
+MODE: DEVIS COMPLET (phases % + forfaits)
+- Génère des phases avec pricing_mode="percentage" pour les missions principales
+- Le total des percentage_fee des phases doit faire ~100%
+- Budget travaux: ${constructionBudget || 'non renseigné'}€, Taux: ${feePercentage || 12}%
+- Ajoute aussi des services forfaitaires (pricing_mode="fixed") pour compléter
+- Inclus des options et frais pertinents
+- Propose une structure équilibrée entre phases % et forfaits`;
+        break;
+    }
+
     const systemPrompt = `Tu es un expert en création de devis et propositions commerciales pour l'architecture, le design d'intérieur, la communication et la scénographie en France.
 
-Tu crées des devis complets et professionnels adaptés au projet décrit.
+${modeInstructions}
 
-RÈGLE CRITIQUE - PHASES:
-- Tu DOIS utiliser UNIQUEMENT les phases fournies dans la liste "PHASES DISPONIBLES"
-- NE CRÉE PAS de nouvelles phases ou codes de phase
-- Chaque ligne de type "phase" doit avoir un phase_code correspondant exactement à un code de la liste
-- Tu peux ajouter des lignes de type "service", "expense", "option" ou "discount" librement
-- Respecte les pourcentages recommandés quand ils sont fournis
+RÈGLES POUR LES PHASES (si applicable):
+- Utilise UNIQUEMENT les phases fournies dans "PHASES DISPONIBLES"
+- Chaque phase doit avoir phase_code correspondant à un code de la liste
+- Respecte les pourcentages recommandés comme base
+${phaseTemplatesContext}
 
-Autres règles:
-- Propose une structure logique avec les phases disponibles
+RÈGLES GÉNÉRALES:
 - Les montants doivent être réalistes pour le marché français
-- Ajoute des options pertinentes pour upsell
-- Inclus les frais habituels (déplacements, impressions, etc.)
-- Les descriptions doivent être professionnelles et détaillées
-${phaseTemplatesContext}`;
+- Les descriptions doivent être professionnelles
+- Ajoute des livrables pertinents pour chaque phase/service`;
 
     const pricingContext = existingPricingItems?.length > 0 
-      ? `\n\nGrille tarifaire disponible (tu peux t'en inspirer pour les services):\n${existingPricingItems.map((item: any) => `- ${item.name}: ${item.unit_price}€/${item.unit}`).join('\n')}`
+      ? `\n\nGrille tarifaire disponible:\n${existingPricingItems.map((item: any) => `- ${item.name}: ${item.unit_price}€/${item.unit}`).join('\n')}`
       : '';
 
-    const userPrompt = `Crée un devis complet pour ce projet:
+    const userPrompt = `Crée un devis pour ce projet:
 
-Type de document: ${documentType === 'quote' ? 'Devis' : 'Proposition'}
-Type de projet: ${projectType || 'Général'}
+Type: ${projectType || 'Général'}
 ${projectDescription ? `Description: ${projectDescription}` : ''}
-${projectBudget ? `Budget travaux/référence: ${projectBudget}€` : ''}
+${constructionBudget ? `Budget travaux: ${constructionBudget}€` : ''}
+${feePercentage ? `Taux honoraires: ${feePercentage}%` : ''}
+${projectBudget ? `Budget projet: ${projectBudget}€` : ''}
 ${projectSurface ? `Surface: ${projectSurface}m²` : ''}
 ${clientInfo ? `Client: ${clientInfo}` : ''}
 ${pricingContext}
 
-IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis structuré avec les lignes appropriées.`;
+Génère les lignes selon le mode demandé.`;
 
     // Build allowed phase codes for validation
     const allowedPhaseCodes = phaseTemplates?.map((p: PhaseTemplate) => p.code) || [];
@@ -100,7 +142,7 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
             type: "function",
             function: {
               name: "generate_quote",
-              description: "Génère un devis complet avec toutes les lignes. Pour les phases, utilise UNIQUEMENT les codes fournis.",
+              description: "Génère un devis avec les lignes appropriées selon le mode demandé.",
               parameters: {
                 type: "object",
                 properties: {
@@ -115,7 +157,7 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
                       properties: {
                         phase_code: { 
                           type: "string", 
-                          description: "Code de phase (DOIT correspondre à un code de la liste fournie)",
+                          description: "Code de phase (pour les phases uniquement)",
                           enum: allowedPhaseCodes.length > 0 ? allowedPhaseCodes : undefined
                         },
                         phase_name: { type: "string", description: "Nom de la ligne/prestation" },
@@ -123,7 +165,16 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
                         line_type: { 
                           type: "string", 
                           enum: ["phase", "service", "option", "expense", "discount"],
-                          description: "Type de ligne - utilise 'phase' uniquement avec les codes fournis"
+                          description: "Type de ligne"
+                        },
+                        pricing_mode: {
+                          type: "string",
+                          enum: ["percentage", "fixed"],
+                          description: "Mode de tarification: percentage pour les phases en %, fixed pour les forfaits"
+                        },
+                        percentage_fee: { 
+                          type: "number", 
+                          description: "Pour pricing_mode=percentage: % des honoraires totaux (0-100)" 
                         },
                         quantity: { type: "number", description: "Quantité" },
                         unit: { type: "string", description: "Unité (forfait, heure, jour, m², etc.)" },
@@ -135,22 +186,14 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
                           enum: ["one_time", "monthly", "quarterly", "yearly"],
                           description: "Type de facturation"
                         },
-                        percentage_fee: { 
-                          type: "number", 
-                          description: "Pour les phases: pourcentage du budget (optionnel)" 
-                        },
                         deliverables: {
                           type: "array",
                           items: { type: "string" },
-                          description: "Liste des livrables (optionnel)"
+                          description: "Liste des livrables"
                         }
                       },
-                      required: ["phase_name", "line_type", "quantity", "unit", "unit_price", "amount", "is_included"]
+                      required: ["phase_name", "line_type", "pricing_mode", "quantity", "unit", "unit_price", "amount", "is_included"]
                     }
-                  },
-                  feePercentage: {
-                    type: "number",
-                    description: "Pourcentage global d'honoraires par rapport au budget (si applicable)"
                   },
                   reasoning: {
                     type: "string",
@@ -193,11 +236,11 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
     }
 
     const result = JSON.parse(toolCall.function.arguments);
-    console.log("Generated quote with", result.lines?.length, "lines");
+    console.log("Generated quote with", result.lines?.length, "lines, mode:", generationMode);
 
-    // Validate and filter phase codes - only allow codes from the provided templates
+    // Validate and process lines
     const validatedLines = result.lines.map((line: any, index: number) => {
-      // If it's a phase type, validate the code
+      // If it's a phase type with percentage mode, validate the code
       if (line.line_type === 'phase' && line.phase_code) {
         const isValidCode = allowedPhaseCodes.includes(line.phase_code);
         if (!isValidCode) {
@@ -206,20 +249,30 @@ IMPORTANT: Utilise UNIQUEMENT les phases de la liste fournie. Génère un devis 
             ...line,
             id: `ai-${Date.now()}-${index}`,
             sort_order: index,
-            line_type: 'service', // Convert to service if code is invalid
+            line_type: 'service',
+            pricing_mode: 'fixed',
             phase_code: undefined,
             billing_type: line.billing_type || 'one_time',
             is_optional: line.line_type === 'option'
           };
         }
       }
+
+      // Recalculate amount for percentage mode if we have the budget
+      let amount = line.amount;
+      if (line.pricing_mode === 'percentage' && totalFees && line.percentage_fee) {
+        amount = Math.round((totalFees * line.percentage_fee) / 100);
+      }
       
       return {
         ...line,
         id: `ai-${Date.now()}-${index}`,
         sort_order: index,
+        amount,
+        unit_price: amount, // For percentage mode, unit_price = amount
         billing_type: line.billing_type || 'one_time',
-        is_optional: line.line_type === 'option'
+        is_optional: line.line_type === 'option',
+        pricing_mode: line.pricing_mode || 'fixed'
       };
     });
 
