@@ -34,6 +34,7 @@ interface ResizablePlanningItemProps {
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
+  onTimeEntryDragStart?: (e: React.DragEvent, entryId: string, title: string) => void;
   onResize?: (scheduleId: string, newDurationHours: number) => void;
   onResizeTimeEntry?: (entryId: string, newDurationMinutes: number) => void;
   onViewEvent?: (event: any) => void;
@@ -52,6 +53,7 @@ export function ResizablePlanningItem({
   onViewTask,
   onUnschedule,
   onScheduleDragStart,
+  onTimeEntryDragStart,
   onResize,
   onResizeTimeEntry,
   onViewEvent,
@@ -232,7 +234,7 @@ export function ResizablePlanningItem({
                 "rounded-lg text-[11px] leading-tight px-2 py-1.5 shadow-sm hover:shadow-lg transition-all duration-200 font-medium flex flex-col relative group select-none backdrop-blur-sm z-10",
                 item.type === "event" && "border-l-2 cursor-pointer",
                 isAbsence && "opacity-60 cursor-not-allowed",
-                isTimeEntry && "border-l-2 border-l-white/30 cursor-pointer",
+                isTimeEntry && "border-l-2 border-l-white/30 cursor-grab active:cursor-grabbing",
                 item.type === "task" && "cursor-grab active:cursor-grabbing",
                 canResize && "cursor-ns-resize",
                 isResizing && "ring-2 ring-white/60 z-20 scale-[1.02]"
@@ -244,12 +246,16 @@ export function ResizablePlanningItem({
                 height: height,
                 maxHeight: maxHeight,
               }}
-              draggable={item.type === "task" && !isAbsence && !isResizing}
+              draggable={(item.type === "task" || item.type === "timeEntry") && !isAbsence && !isResizing}
               onDragStart={(e) => {
                 if (item.type === "task" && schedule && !isResizing) {
                   e.stopPropagation();
                   hasDraggedRef.current = true;
                   onScheduleDragStart(e, schedule.id, item.title);
+                } else if (item.type === "timeEntry" && onTimeEntryDragStart && !isResizing) {
+                  e.stopPropagation();
+                  hasDraggedRef.current = true;
+                  onTimeEntryDragStart(e, item.id, item.title);
                 }
               }}
               onClick={handleItemClick}
