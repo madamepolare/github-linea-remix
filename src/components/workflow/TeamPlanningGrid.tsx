@@ -200,6 +200,16 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     e.dataTransfer.effectAllowed = "move";
   }, [schedules]);
 
+  // Handler pour démarrer le drag d'un temps manuel
+  const handleTimeEntryDragStart = useCallback((e: React.DragEvent, entryId: string, title: string) => {
+    const entry = timeEntries?.find(te => te.id === entryId);
+    const durationMinutes = entry?.duration_minutes || 60;
+    const payload = JSON.stringify({ timeEntryId: entryId, itemType: "timeEntry", durationMinutes });
+    e.dataTransfer.setData("application/json", payload);
+    e.dataTransfer.setData("text/plain", payload);
+    e.dataTransfer.effectAllowed = "move";
+  }, [timeEntries]);
+
   // Map des emails vers user_ids
   const emailToUserMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -575,6 +585,33 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     });
   }, [updateTimeEntry]);
 
+  // Handler pour déplacer un temps manuel
+  const handleMoveTimeEntry = useCallback((entryId: string, newUserId: string, newDay: Date) => {
+    updateTimeEntry.mutate({
+      id: entryId,
+      user_id: newUserId,
+      date: format(newDay, 'yyyy-MM-dd'),
+    });
+  }, [updateTimeEntry]);
+
+  // Helper pour vérifier si un membre a une absence bloquante pour un jour donné
+  const hasBlockingAbsence = useCallback((memberId: string, day: Date): boolean => {
+    const memberAbsences = absences?.filter(a => a.user_id === memberId) || [];
+    for (const absence of memberAbsences) {
+      const absenceStart = parseISO(absence.start_date);
+      const absenceEnd = parseISO(absence.end_date);
+      
+      if (absenceStart <= day && absenceEnd >= day) {
+        // Télétravail is NOT a blocking absence
+        if (absence.absence_type === 'teletravail') {
+          continue;
+        }
+        return true;
+      }
+    }
+    return false;
+  }, [absences]);
+
   // Gestion du drag & drop
   const handleDragOver = useCallback((e: React.DragEvent, cellKey: string) => {
     e.preventDefault();
@@ -590,6 +627,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     e.preventDefault();
     setDragOverCell(null);
     
+    // Check if member has a blocking absence for this day
+    if (hasBlockingAbsence(member.user_id, day)) {
+      console.log("Cannot drop on absent day (except télétravail)");
+      return;
+    }
+    
     try {
       const dataString =
         e.dataTransfer.getData("application/json") ||
@@ -601,6 +644,12 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
       // Check if this is a scheduled task being moved
       if (data.scheduleId) {
         handleMoveSchedule(data.scheduleId, member.user_id, day);
+        return;
+      }
+      
+      // Check if this is a time entry being moved
+      if (data.timeEntryId) {
+        handleMoveTimeEntry(data.timeEntryId, member.user_id, day);
         return;
       }
       
@@ -622,7 +671,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
     } catch (error) {
       console.error("Error handling drop:", error);
     }
-  }, [createSchedule, onTaskDrop, handleMoveSchedule]);
+  }, [createSchedule, onTaskDrop, handleMoveSchedule, handleMoveTimeEntry, hasBlockingAbsence]);
 
   if (isLoading) {
     return (
@@ -1021,36 +1070,17 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
               className="h-[72px] overflow-hidden border-b bg-background shrink-0 box-border"
             >
               <div className="min-w-max">
-                {/* Ligne des mois - avec highlight pour le jour actuel */}
+                {/* Ligne des mois */}
                 <div className="flex h-9 border-b">
-                  {monthGroups.map((group, idx) => {
-                    // Check if today is in this month group
-                    const today = new Date();
-                    const hasTodayInGroup = group.days.some(d => isSameDay(d, today));
-                    
-                    // Calculate position of today within the group for the highlight column
-                    const todayIndex = group.days.findIndex(d => isSameDay(d, today));
-                    
-                    return (
-                      <div
-                        key={`${group.month}-${group.year}-${idx}`}
-                        className="relative flex items-center justify-center text-xs font-semibold capitalize"
-                        style={{ width: group.days.length * CELL_WIDTH }}
-                      >
-                        {/* Today highlight strip in the month row */}
-                        {hasTodayInGroup && todayIndex >= 0 && (
-                          <div 
-                            className="absolute top-0 bottom-0 bg-primary/5"
-                            style={{ 
-                              left: todayIndex * CELL_WIDTH, 
-                              width: CELL_WIDTH 
-                            }}
-                          />
-                        )}
-                        <span className="relative z-10">{group.month} {group.year}</span>
-                      </div>
-                    );
-                  })}
+                  {monthGroups.map((group, idx) => (
+                    <div
+                      key={`${group.month}-${group.year}-${idx}`}
+                      className="flex items-center justify-center text-xs font-semibold capitalize"
+                      style={{ width: group.days.length * CELL_WIDTH }}
+                    >
+                      {group.month} {group.year}
+                    </div>
+                  ))}
                 </div>
 
                 {/* Ligne des jours */}
@@ -1138,6 +1168,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                       onViewTask={handleViewTask}
                       onUnschedule={handleUnschedule}
                       onScheduleDragStart={handleScheduleDragStart}
+                      onTimeEntryDragStart={handleTimeEntryDragStart}
                       onResizeSchedule={handleResizeSchedule}
                       onChangeTime={handleChangeScheduleTime}
                       onResizeTimeEntry={handleResizeTimeEntry}
@@ -1217,6 +1248,7 @@ interface MemberRowProps {
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
+  onTimeEntryDragStart?: (e: React.DragEvent, entryId: string, title: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
   onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
@@ -1244,6 +1276,7 @@ function MemberRow({
   onViewTask,
   onUnschedule,
   onScheduleDragStart,
+  onTimeEntryDragStart,
   onResizeSchedule,
   onChangeTime,
   onResizeTimeEntry,
@@ -1287,6 +1320,7 @@ function MemberRow({
             onViewTask={onViewTask}
             onUnschedule={onUnschedule}
             onScheduleDragStart={onScheduleDragStart}
+            onTimeEntryDragStart={onTimeEntryDragStart}
             onResizeSchedule={onResizeSchedule}
             onChangeTime={onChangeTime}
             onResizeTimeEntry={onResizeTimeEntry}
@@ -1320,6 +1354,7 @@ interface DayCellProps {
   onViewTask: (schedule: TaskSchedule) => void;
   onUnschedule: (scheduleId: string) => void;
   onScheduleDragStart: (e: React.DragEvent, scheduleId: string, taskTitle: string) => void;
+  onTimeEntryDragStart?: (e: React.DragEvent, entryId: string, title: string) => void;
   onResizeSchedule: (scheduleId: string, newDurationHours: number) => void;
   onChangeTime: (scheduleId: string, newStart: Date, newEnd: Date) => void;
   onResizeTimeEntry: (entryId: string, newDurationMinutes: number) => void;
@@ -1349,6 +1384,7 @@ function DayCell({
   onViewTask,
   onUnschedule,
   onScheduleDragStart,
+  onTimeEntryDragStart,
   onResizeSchedule,
   onChangeTime,
   onResizeTimeEntry,
@@ -1558,6 +1594,7 @@ function DayCell({
               onViewTask={onViewTask}
               onUnschedule={onUnschedule}
               onScheduleDragStart={onScheduleDragStart}
+              onTimeEntryDragStart={onTimeEntryDragStart}
               onResize={onResizeSchedule}
               onChangeTime={onChangeTime}
               onResizeTimeEntry={onResizeTimeEntry}
