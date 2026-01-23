@@ -377,7 +377,7 @@ export function AIQuoteGenerator({
           <div className="space-y-1.5">
             <Label className="text-xs flex items-center gap-1">
               <Euro className="h-3 w-3" />
-              Montant travaux (base de calcul %)
+              Budget estimé (base de calcul %)
             </Label>
             <Input
               type="number"
