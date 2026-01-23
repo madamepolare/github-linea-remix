@@ -73,6 +73,7 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
   // Scroll sync (members column <-> grid)
   const membersScrollRef = useRef<HTMLDivElement | null>(null);
   const gridScrollRef = useRef<HTMLDivElement | null>(null);
+  const gridHeaderScrollRef = useRef<HTMLDivElement | null>(null);
   const isSyncingScrollRef = useRef(false);
   
   // Time entry dialog state (add) - supports multi-day selection
@@ -1011,25 +1012,11 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
             </div>
           </div>
 
-          {/* Grille des jours (scrollable) */}
-           <div
-             ref={gridScrollRef}
-             className="flex-1 overflow-auto"
-             onScroll={(e) => {
-               if (isSyncingScrollRef.current) return;
-               isSyncingScrollRef.current = true;
-               const scrollTop = (e.target as HTMLElement).scrollTop;
-               if (membersScrollRef.current) {
-                 membersScrollRef.current.scrollTop = scrollTop;
-               }
-               requestAnimationFrame(() => {
-                 isSyncingScrollRef.current = false;
-               });
-             }}
-           >
-            <div className="min-w-max">
-              {/* Header des mois et jours */}
-              <div className="sticky top-0 bg-background z-10 border-b">
+          {/* Grille des jours (header fixe + body scrollable) */}
+          <div className="flex-1 overflow-hidden flex flex-col">
+            {/* Header des mois et jours - scroll horizontal synchronisé */}
+            <div ref={gridHeaderScrollRef} className="overflow-hidden border-b bg-background shrink-0">
+              <div className="min-w-max">
                 {/* Ligne des mois */}
                 <div className="flex h-9 border-b">
                   {monthGroups.map((group, idx) => (
@@ -1042,13 +1029,13 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                     </div>
                   ))}
                 </div>
-                
+
                 {/* Ligne des jours */}
                 <div className="flex h-9">
                   {days.map((day) => {
                     const isToday = isSameDay(day, new Date());
                     const weekend = isWeekend(day);
-                    
+
                     return (
                       <div
                         key={day.toISOString()}
@@ -1075,8 +1062,33 @@ export function TeamPlanningGrid({ onEventClick, onCellClick, onTaskDrop }: Team
                   })}
                 </div>
               </div>
+            </div>
 
-              <div>
+            {/* Body scrollable (vertical + horizontal) */}
+            <div
+              ref={gridScrollRef}
+              className="flex-1 overflow-auto"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+
+                // Sync horizontal scroll to header
+                if (gridHeaderScrollRef.current) {
+                  gridHeaderScrollRef.current.scrollLeft = el.scrollLeft;
+                }
+
+                // Sync vertical scroll with members column
+                if (isSyncingScrollRef.current) return;
+                isSyncingScrollRef.current = true;
+                const scrollTop = el.scrollTop;
+                if (membersScrollRef.current) {
+                  membersScrollRef.current.scrollTop = scrollTop;
+                }
+                requestAnimationFrame(() => {
+                  isSyncingScrollRef.current = false;
+                });
+              }}
+            >
+              <div className="min-w-max">
                 {filteredMembers.length === 0 ? (
                   <div className="flex items-center justify-center h-40 text-muted-foreground text-sm">
                     {selectedMemberIds.size > 0 ? 'Aucun membre sélectionné' : 'Ajoutez des membres à votre équipe pour voir le planning'}
